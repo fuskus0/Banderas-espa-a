@@ -223,3 +223,158 @@ function showDemoMessage() {
     );
 
 }
+
+// ====================================
+// FORMULARIO DE BANDERAS
+// ====================================
+
+const submitModal =
+    document.getElementById("submitModal");
+
+const flagForm =
+    document.getElementById("flagForm");
+
+const formMessage =
+    document.getElementById("formMessage");
+
+
+// ====================================
+// ABRIR FORMULARIO
+// ====================================
+
+function abrirFormulario() {
+
+    submitModal.style.display =
+        "flex";
+
+}
+
+
+// ====================================
+// CERRAR FORMULARIO
+// ====================================
+
+function cerrarFormulario() {
+
+    submitModal.style.display =
+        "none";
+
+}
+
+
+// ====================================
+// ENVIAR BANDERA
+// ====================================
+
+flagForm.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+
+        formMessage.textContent =
+            "Enviando bandera...";
+
+
+        const municipio =
+            document.getElementById(
+                "municipio"
+            ).value.trim();
+
+        const provincia =
+            document.getElementById(
+                "provincia"
+            ).value.trim();
+
+        const latitud =
+            Number(
+                document.getElementById(
+                    "latitud"
+                ).value
+            );
+
+        const longitud =
+            Number(
+                document.getElementById(
+                    "longitud"
+                ).value
+            );
+
+        const fechaVista =
+            document.getElementById(
+                "fechaVista"
+            ).value;
+
+        const descripcion =
+            document.getElementById(
+                "descripcion"
+            ).value.trim();
+
+
+        // Comprobar coordenadas
+
+        if (
+            !Number.isFinite(latitud) ||
+            !Number.isFinite(longitud)
+        ) {
+
+            formMessage.textContent =
+                "❌ La ubicación no es válida.";
+
+            return;
+
+        }
+
+
+        // Comprobar España
+
+        if (
+            latitud < 35 ||
+            latitud > 44 ||
+            longitud < -10 ||
+            longitud > 5
+        ) {
+
+            formMessage.textContent =
+                "❌ La ubicación parece estar fuera de España.";
+
+            return;
+
+        }
+
+
+        const {
+            error
+        } = await supabaseClient
+            .from("banderas")
+            .insert({
+                municipio: municipio,
+                provincia: provincia,
+                latitud: latitud,
+                longitud: longitud,
+                fecha_vista: fechaVista,
+                descripcion: descripcion,
+                estado: "revision"
+            });
+
+
+        if (error) {
+
+            console.error(error);
+
+            formMessage.textContent =
+                "❌ No se pudo enviar la bandera.";
+
+            return;
+
+        }
+
+
+        formMessage.textContent =
+            "✅ ¡Bandera enviada! Ahora será revisada.";
+
+        flagForm.reset();
+
+    }
+);
