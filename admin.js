@@ -1,12 +1,8 @@
-// ====================================
-// SUPABASE
-// ====================================
-
 const SUPABASE_URL =
     "https://yljxozttfnvyjrwrvcab.supabase.co";
 
 const SUPABASE_KEY =
-    "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
+    "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rOxKE";
 
 const supabaseClient =
     supabase.createClient(
@@ -15,15 +11,15 @@ const supabaseClient =
     );
 
 
-// ====================================
+// ======================================================
 // ELEMENTOS
-// ====================================
+// ======================================================
 
 const loginSection =
     document.getElementById("loginSection");
 
-const adminPanel =
-    document.getElementById("adminPanel");
+const adminSection =
+    document.getElementById("adminSection");
 
 const loginForm =
     document.getElementById("loginForm");
@@ -31,22 +27,16 @@ const loginForm =
 const loginMessage =
     document.getElementById("loginMessage");
 
-const welcomeMessage =
-    document.getElementById("welcomeMessage");
+const adminMessage =
+    document.getElementById("adminMessage");
 
-const logoutButton =
-    document.getElementById("logoutButton");
-
-const pendingFlags =
-    document.getElementById("pendingFlags");
-
-const pendingCount =
-    document.getElementById("pendingCount");
+const flagsContainer =
+    document.getElementById("flagsContainer");
 
 
-// ====================================
+// ======================================================
 // COMPROBAR SESIÓN
-// ====================================
+// ======================================================
 
 async function comprobarSesion() {
 
@@ -54,396 +44,683 @@ async function comprobarSesion() {
         data: {
             session
         }
-    } = await supabaseClient.auth.getSession();
+    } =
+        await supabaseClient
+            .auth
+            .getSession();
+
 
     if (session) {
-        mostrarPanel(session.user);
+
+        await comprobarAdmin(
+            session.user
+        );
+
     } else {
+
         mostrarLogin();
     }
 }
 
 
-// ====================================
+comprobarSesion();
+
+
+// ======================================================
 // LOGIN
-// ====================================
+// ======================================================
 
-function mostrarLogin() {
+if (loginForm) {
 
-    loginSection.style.display = "block";
-    adminPanel.style.display = "none";
+    loginForm.addEventListener(
+        "submit",
+        async event => {
 
+            event.preventDefault();
+
+
+            const email =
+                document.getElementById(
+                    "email"
+                ).value.trim();
+
+
+            const password =
+                document.getElementById(
+                    "password"
+                ).value;
+
+
+            loginMessage.textContent =
+                "Iniciando sesión...";
+
+
+            const {
+                data,
+                error
+            } =
+                await supabaseClient
+                    .auth
+                    .signInWithPassword({
+                        email,
+                        password
+                    });
+
+
+            if (error) {
+
+                console.error(
+                    "Error de login:",
+                    error
+                );
+
+                loginMessage.textContent =
+                    "❌ " + error.message;
+
+                return;
+            }
+
+
+            await comprobarAdmin(
+                data.user
+            );
+        }
+    );
 }
 
 
-function mostrarPanel(usuario) {
+// ======================================================
+// COMPROBAR SI ES ADMIN
+// ======================================================
 
-    loginSection.style.display = "none";
-    adminPanel.style.display = "block";
+async function comprobarAdmin(user) {
 
-    welcomeMessage.textContent =
-        "Sesión iniciada como: " +
-        usuario.email;
+    if (!user) {
 
-    cargarPendientes();
-}
+        mostrarLogin();
 
-
-// ====================================
-// CARGAR PENDIENTES
-// ====================================
-
-async function cargarPendientes() {
-
-    pendingFlags.innerHTML =
-        "<p>Cargando banderas...</p>";
+        return;
+    }
 
 
     const {
         data,
         error
-    } = await supabaseClient
-        .from("banderas")
-        .select("*")
-        .eq("estado", "revision")
-        .order("creado_en", {
-            ascending: false
-        });
+    } =
+        await supabaseClient
+            .from("admin_users")
+            .select("user_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
 
 
     if (error) {
 
-        console.error(error);
+        console.error(
+            "Error comprobando administrador:",
+            error
+        );
 
-        pendingFlags.innerHTML =
-            "<p>❌ No se pudieron cargar las banderas.</p>";
+        mostrarLogin();
+
+        if (loginMessage) {
+
+            loginMessage.textContent =
+                "❌ No se ha podido comprobar el administrador.";
+        }
 
         return;
     }
 
 
-    pendingCount.textContent =
-        data.length;
+    if (!data) {
+
+        await supabaseClient.auth.signOut();
+
+        mostrarLogin();
+
+        if (loginMessage) {
+
+            loginMessage.textContent =
+                "❌ Esta cuenta no tiene permisos de administrador.";
+        }
+
+        return;
+    }
 
 
-    if (data.length === 0) {
+    mostrarAdmin();
 
-        pendingFlags.innerHTML = `
-            <div class="empty-pending">
+    cargarBanderas();
+}
 
-                <div>🎉</div>
 
-                <h3>
-                    No hay banderas pendientes
-                </h3>
+// ======================================================
+// MOSTRAR LOGIN
+// ======================================================
 
-                <p>
-                    Todas las banderas han sido revisadas.
-                </p>
+function mostrarLogin() {
 
+    if (loginSection) {
+
+        loginSection.style.display =
+            "block";
+    }
+
+
+    if (adminSection) {
+
+        adminSection.style.display =
+            "none";
+    }
+}
+
+
+// ======================================================
+// MOSTRAR PANEL
+// ======================================================
+
+function mostrarAdmin() {
+
+    if (loginSection) {
+
+        loginSection.style.display =
+            "none";
+    }
+
+
+    if (adminSection) {
+
+        adminSection.style.display =
+            "block";
+    }
+}
+
+
+// ======================================================
+// CARGAR TODAS LAS BANDERAS
+// ======================================================
+
+async function cargarBanderas() {
+
+    if (!flagsContainer) {
+        return;
+    }
+
+
+    flagsContainer.innerHTML =
+        "<p>⏳ Cargando banderas...</p>";
+
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("banderas")
+            .select("*")
+            .order(
+                "creado_en",
+                {
+                    ascending: false
+                }
+            );
+
+
+    if (error) {
+
+        console.error(
+            "Error cargando banderas:",
+            error
+        );
+
+
+        flagsContainer.innerHTML =
+            `
+            <div class="admin-error">
+                ❌ No se pudieron cargar las banderas.
+                <br>
+                ${escapeHtml(error.message)}
             </div>
-        `;
+            `;
 
         return;
     }
 
 
-    pendingFlags.innerHTML = "";
+    if (!data || data.length === 0) {
+
+        flagsContainer.innerHTML =
+            `
+            <div class="empty-admin">
+                🇪🇸 Todavía no hay banderas registradas.
+            </div>
+            `;
+
+        return;
+    }
+
+
+    flagsContainer.innerHTML = "";
 
 
     data.forEach(bandera => {
 
         const card =
-            document.createElement("div");
+            crearTarjetaBandera(
+                bandera
+            );
 
-        card.className =
-            "pending-card";
+        flagsContainer.appendChild(
+            card
+        );
+    });
+}
 
 
-        card.innerHTML = `
+// ======================================================
+// CREAR TARJETA
+// ======================================================
 
-            <div class="pending-card-header">
+function crearTarjetaBandera(bandera) {
+
+    const card =
+        document.createElement("article");
+
+    card.className =
+        "admin-flag-card";
+
+
+    const estado =
+        bandera.estado ||
+        "oculto";
+
+
+    let estadoTexto =
+        "🔴 OCULTO";
+
+
+    if (estado === "no_confirmada") {
+
+        estadoTexto =
+            "🟡 NO CONFIRMADA";
+
+    }
+
+
+    if (estado === "verificada") {
+
+        estadoTexto =
+            "🟢 VERIFICADA";
+    }
+
+
+    card.innerHTML = `
+
+        <div class="admin-flag-header">
+
+            <div>
 
                 <h3>
-                    🇪🇸 Bandera #${bandera.id}
+                    🇪🇸 Bandera #${Number(bandera.id)}
                 </h3>
 
-                <span class="review-badge">
-                    🟡 EN REVISIÓN
+                <span class="admin-status status-${escapeAttribute(estado)}">
+                    ${estadoTexto}
                 </span>
 
             </div>
 
+        </div>
 
-            <div class="pending-info">
+
+        <div class="admin-flag-body">
+
+            ${
+                bandera.foto_url
+                ?
+                `
+                <div class="admin-photo-container">
+
+                    <img
+                        src="${escapeAttribute(bandera.foto_url)}"
+                        class="admin-flag-photo"
+                        alt="Foto de la bandera #${Number(bandera.id)}"
+                        loading="lazy"
+                    >
+
+                </div>
+                `
+                :
+                `
+                <div class="no-photo">
+                    📷 No hay fotografía
+                </div>
+                `
+            }
+
+
+            <div class="admin-flag-info">
 
                 <p>
-                    📍
-                    <strong>
-                        ${bandera.municipio}
-                    </strong>,
-                    ${bandera.provincia}
+                    <strong>📍 Municipio:</strong>
+                    ${escapeHtml(bandera.municipio)}
                 </p>
 
                 <p>
-                    📅 Vista:
-                    ${bandera.fecha_vista}
+                    <strong>🗺️ Provincia:</strong>
+                    ${escapeHtml(bandera.provincia)}
                 </p>
 
                 <p>
-                    🗺️ Coordenadas:
-                    ${bandera.latitud},
-                    ${bandera.longitud}
+                    <strong>📅 Fecha:</strong>
+                    ${escapeHtml(bandera.fecha_vista)}
                 </p>
 
                 <p>
-                    📝
-                    ${
-                        bandera.descripcion ||
-                        "Sin descripción."
-                    }
+                    <strong>📍 Coordenadas:</strong>
+                    ${Number(bandera.latitud).toFixed(6)},
+                    ${Number(bandera.longitud).toFixed(6)}
+                </p>
+
+                ${
+                    bandera.descripcion
+                    ?
+                    `
+                    <p>
+                        <strong>💬 Comentario:</strong>
+                        ${escapeHtml(bandera.descripcion)}
+                    </p>
+                    `
+                    :
+                    ""
+                }
+
+                <p>
+                    <strong>🕐 Registrada:</strong>
+                    ${formatearFecha(
+                        bandera.creado_en
+                    )}
                 </p>
 
             </div>
 
-
-            <div class="pending-actions">
-
-                <button
-                    class="view-map-button"
-                    onclick="
-                        verEnMapa(
-                            ${bandera.latitud},
-                            ${bandera.longitud}
-                        )
-                    "
-                >
-                    🗺️ Ver ubicación
-                </button>
+        </div>
 
 
-                <button
-                    class="verify-button"
-                    onclick="
-                        verificarBandera(
-                            ${bandera.id}
-                        )
-                    "
-                >
-                    🟢 Verificar
-                </button>
+        <div class="admin-actions">
+
+            <button
+                class="admin-button hidden-button"
+                onclick="cambiarEstado(
+                    ${Number(bandera.id)},
+                    'oculto'
+                )"
+            >
+                🔴 Oculto
+            </button>
 
 
-                <button
-                    class="reject-button"
-                    onclick="
-                        rechazarBandera(
-                            ${bandera.id}
-                        )
-                    "
-                >
-                    ❌ Rechazar
-                </button>
-
-            </div>
-
-        `;
+            <button
+                class="admin-button pending-button"
+                onclick="cambiarEstado(
+                    ${Number(bandera.id)},
+                    'no_confirmada'
+                )"
+            >
+                🟡 No confirmada
+            </button>
 
 
-        pendingFlags.appendChild(card);
+            <button
+                class="admin-button verified-button"
+                onclick="cambiarEstado(
+                    ${Number(bandera.id)},
+                    'verificada'
+                )"
+            >
+                🟢 Verificar
+            </button>
 
-    });
 
+            <button
+                class="admin-button delete-button"
+                onclick="eliminarBandera(
+                    ${Number(bandera.id)}
+                )"
+            >
+                🗑️ Eliminar
+            </button>
+
+        </div>
+
+    `;
+
+
+    return card;
 }
 
 
-// ====================================
-// VER EN MAPA
-// ====================================
+// ======================================================
+// CAMBIAR ESTADO
+// ======================================================
 
-function verEnMapa(lat, lng) {
+async function cambiarEstado(
+    id,
+    nuevoEstado
+) {
 
-    const url =
-        `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const nombres = {
 
-    window.open(
-        url,
-        "_blank"
-    );
+        oculto:
+            "oculto",
 
-}
+        no_confirmada:
+            "no confirmada",
+
+        verificada:
+            "verificada"
+    };
 
 
-// ====================================
-// VERIFICAR
-// ====================================
-
-async function verificarBandera(id) {
-
-    const confirmar =
+    const confirmado =
         confirm(
-            "¿Quieres verificar esta bandera?"
+            `¿Quieres marcar la bandera #${id} como ${nombres[nuevoEstado]}?`
         );
 
-    if (!confirmar) {
+
+    if (!confirmado) {
         return;
     }
+
+
+    adminMessage.textContent =
+        "⏳ Guardando cambios...";
 
 
     const {
         error
-    } = await supabaseClient
-        .from("banderas")
-        .update({
-            estado: "verificada"
-        })
-        .eq("id", id);
+    } =
+        await supabaseClient
+            .from("banderas")
+            .update({
+                estado: nuevoEstado
+            })
+            .eq("id", id);
 
 
     if (error) {
 
-        console.error(error);
-
-        alert(
-            "❌ No se pudo verificar la bandera."
-        );
-
-        return;
-    }
-
-
-    alert(
-        "🟢 Bandera verificada correctamente."
-    );
-
-
-    cargarPendientes();
-
-}
-
-
-// ====================================
-// RECHAZAR
-// ====================================
-
-async function rechazarBandera(id) {
-
-    const confirmar =
-        confirm(
-            "¿Seguro que quieres rechazar esta bandera? Se eliminará del registro."
-        );
-
-    if (!confirmar) {
-        return;
-    }
-
-
-    const {
-        error
-    } = await supabaseClient
-        .from("banderas")
-        .delete()
-        .eq("id", id);
-
-
-    if (error) {
-
-        console.error(error);
-
-        alert(
-            "❌ No se pudo rechazar la bandera."
-        );
-
-        return;
-    }
-
-
-    alert(
-        "❌ Bandera rechazada."
-    );
-
-
-    cargarPendientes();
-
-}
-
-
-// ====================================
-// LOGIN
-// ====================================
-
-loginForm.addEventListener(
-    "submit",
-    async function(event) {
-
-        event.preventDefault();
-
-
-        const email =
-            document.getElementById(
-                "email"
-            ).value;
-
-        const password =
-            document.getElementById(
-                "password"
-            ).value;
-
-
-        loginMessage.textContent =
-            "Iniciando sesión...";
-
-
-        const {
-            data,
+        console.error(
+            "Error cambiando estado:",
             error
-        } = await supabaseClient
-            .auth
-            .signInWithPassword({
-                email,
-                password
-            });
+        );
 
 
-        if (error) {
+        adminMessage.textContent =
+            "❌ " + error.message;
 
-            console.error(error);
+        return;
+    }
 
-            loginMessage.textContent =
-                "❌ Correo o contraseña incorrectos.";
+
+    adminMessage.textContent =
+        `✅ Bandera #${id} actualizada.`;
+
+
+    await cargarBanderas();
+}
+
+
+// ======================================================
+// ELIMINAR BANDERA
+// ======================================================
+
+async function eliminarBandera(id) {
+
+    const confirmado =
+        confirm(
+            `¿Seguro que quieres eliminar la bandera #${id}? Esta acción no se puede deshacer.`
+        );
+
+
+    if (!confirmado) {
+        return;
+    }
+
+
+    adminMessage.textContent =
+        "⏳ Eliminando bandera...";
+
+
+    const {
+        error
+    } =
+        await supabaseClient
+            .from("banderas")
+            .delete()
+            .eq("id", id);
+
+
+    if (error) {
+
+        console.error(
+            "Error eliminando bandera:",
+            error
+        );
+
+
+        adminMessage.textContent =
+            "❌ " + error.message;
+
+        return;
+    }
+
+
+    adminMessage.textContent =
+        `🗑️ Bandera #${id} eliminada.`;
+
+
+    await cargarBanderas();
+}
+
+
+// ======================================================
+// FORMATEAR FECHA
+// ======================================================
+
+function formatearFecha(fecha) {
+
+    if (!fecha) {
+        return "—";
+    }
+
+
+    const date =
+        new Date(fecha);
+
+
+    if (Number.isNaN(
+        date.getTime()
+    )) {
+
+        return fecha;
+    }
+
+
+    return date.toLocaleString(
+        "es-ES",
+        {
+            dateStyle: "short",
+            timeStyle: "short"
+        }
+    );
+}
+
+
+// ======================================================
+// ESCAPE HTML
+// ======================================================
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        text ?? "";
+
+    return div.innerHTML;
+}
+
+
+function escapeAttribute(text) {
+
+    return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+
+// ======================================================
+// CERRAR SESIÓN
+// ======================================================
+
+async function cerrarSesion() {
+
+    await supabaseClient
+        .auth
+        .signOut();
+
+    window.location.reload();
+}
+
+
+// ======================================================
+// CAMBIOS DE SESIÓN
+// ======================================================
+
+supabaseClient.auth.onAuthStateChange(
+    async (event, session) => {
+
+        if (event === "SIGNED_OUT") {
+
+            mostrarLogin();
 
             return;
         }
 
 
-        loginMessage.textContent = "";
+        if (
+            event === "SIGNED_IN" &&
+            session
+        ) {
 
-        mostrarPanel(data.user);
-
+            await comprobarAdmin(
+                session.user
+            );
+        }
     }
 );
-
-
-// ====================================
-// CERRAR SESIÓN
-// ====================================
-
-logoutButton.addEventListener(
-    "click",
-    async function() {
-
-        await supabaseClient
-            .auth
-            .signOut();
-
-        mostrarLogin();
-
-    }
-);
-
-
-// ====================================
-// INICIAR
-// ====================================
-
-comprobarSesion();
