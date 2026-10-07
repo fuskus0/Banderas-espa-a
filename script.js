@@ -1,20 +1,27 @@
+// ==========================================
+// CONFIGURACIÓN SUPABASE
+// ==========================================
+
 const SUPABASE_URL =
     "https://yljxozttfnvyjrwrvcab.supabase.co";
 
 const SUPABASE_KEY =
     "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
 
-const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+const supabaseClient =
+    supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
 
 
-// ======================================================
+// ==========================================
 // MAPA PRINCIPAL
-// ======================================================
+// ==========================================
 
-const map = L.map("map");
+const map = L.map("map", {
+    zoomControl: true
+});
 
 L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -24,302 +31,642 @@ L.tileLayer(
     }
 ).addTo(map);
 
-map.setView([40.2, -3.7], 6);
+
+// Vista inicial de España
+map.setView(
+    [40.2, -3.7],
+    6
+);
+
+
+// ==========================================
+// VARIABLES
+// ==========================================
 
 const markers = [];
 
+let todasLasBanderas = [];
 
-// ======================================================
-// CARGAR SOLO BANDERAS VERIFICADAS
-// ======================================================
+
+// ==========================================
+// CARGAR BANDERAS DESDE SUPABASE
+// ==========================================
 
 async function cargarBanderas() {
 
-    const { data, error } = await supabaseClient
-        .from("banderas")
-        .select("*")
-        .eq("estado", "verificada")
-        .order("id", { ascending: true });
+    try {
 
-    if (error) {
-        console.error("Error cargando banderas:", error);
-        return;
+        const { data, error } =
+            await supabaseClient
+                .from("banderas")
+                .select("*")
+                .order("creado_en", {
+                    ascending: false
+                });
+
+
+        if (error) {
+
+            console.error(
+                "Error cargando las banderas:",
+                error
+            );
+
+            return;
+
+        }
+
+
+        todasLasBanderas = data || [];
+
+
+        // Limpiar marcadores anteriores
+        markers.forEach(item => {
+
+            map.removeLayer(
+                item.marker
+            );
+
+        });
+
+        markers.length = 0;
+
+
+        // Crear nuevos marcadores
+        todasLasBanderas.forEach(
+            crearMarcador
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error inesperado:",
+            error
+        );
+
     }
 
-    markers.length = 0;
+}
 
-    data.forEach(bandera => {
 
-        const marker = L.marker([
+// ==========================================
+// CREAR MARCADOR
+// ==========================================
+
+function crearMarcador(bandera) {
+
+    let estadoTexto;
+    let estadoClase;
+
+
+    if (
+        bandera.estado ===
+        "verificada"
+    ) {
+
+        estadoTexto =
+            "🟢 VERIFICADA";
+
+        estadoClase =
+            "verified";
+
+    } else {
+
+        estadoTexto =
+            "🟡 EN REVISIÓN";
+
+        estadoClase =
+            "review";
+
+    }
+
+
+    const marker =
+        L.marker([
             bandera.latitud,
             bandera.longitud
         ]).addTo(map);
 
-        marker.bindPopup(`
-            <div class="flag-popup">
 
-                <h3>🇪🇸 Bandera #${bandera.id}</h3>
+    marker.bindPopup(`
 
-                <p>
-                    📍 ${escapeHtml(bandera.municipio)}
-                </p>
+        <div class="flag-popup">
 
-                <p>
-                    🗺️ ${escapeHtml(bandera.provincia)}
-                </p>
+            <h3>
+                🇪🇸 Bandera #${bandera.id}
+            </h3>
 
-                <p>
-                    📅 ${escapeHtml(bandera.fecha_vista)}
-                </p>
+            <p>
+                📍 ${escapeHtml(
+                    bandera.municipio
+                )}
+            </p>
 
-                <p>
-                    🟢 VERIFICADA
-                </p>
+            <p>
+                🗺️ ${escapeHtml(
+                    bandera.provincia
+                )}
+            </p>
 
-                ${
-                    bandera.descripcion
-                    ?
-                    `<p>${escapeHtml(bandera.descripcion)}</p>`
-                    :
-                    ""
-                }
+            <p>
+                📅 ${formatearFecha(
+                    bandera.fecha_vista
+                )}
+            </p>
 
-                ${
-                    bandera.foto_url
-                    ?
+            <p>
+                ${estadoTexto}
+            </p>
+
+            <hr>
+
+            ${
+                bandera.descripcion
+                    ? `
+                        <p>
+                            ${escapeHtml(
+                                bandera.descripcion
+                            )}
+                        </p>
                     `
-                    <img
-                        src="${escapeAttribute(bandera.foto_url)}"
-                        class="popup-photo"
-                        alt="Foto de la bandera"
-                    >
-                    `
-                    :
-                    ""
-                }
+                    : ""
+            }
 
-                <button
-                    onclick="findFlag(
-                        ${Number(bandera.latitud)},
-                        ${Number(bandera.longitud)}
-                    )"
-                >
-                    🧭 Intentar encontrarla
-                </button>
+            <button
+                onclick="
+                    findFlag(
+                        ${bandera.latitud},
+                        ${bandera.longitud}
+                    )
+                "
+            >
+                🧭 Intentar encontrarla
+            </button>
 
-            </div>
-        `);
+        </div>
 
-        markers.push({
-            marker,
-            bandera
-        });
+    `);
+
+
+    markers.push({
+        marker: marker,
+        bandera: bandera
     });
+
 }
 
 
-// ======================================================
-// SEGURIDAD HTML
-// ======================================================
+// ==========================================
+// ESCAPAR TEXTO
+// ==========================================
 
 function escapeHtml(text) {
 
-    const div = document.createElement("div");
+    if (
+        text === null ||
+        text === undefined
+    ) {
 
-    div.textContent = text ?? "";
+        return "";
+
+    }
+
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+
+    div.textContent =
+        String(text);
+
 
     return div.innerHTML;
+
 }
 
 
-function escapeAttribute(text) {
+// ==========================================
+// FORMATEAR FECHA
+// ==========================================
 
-    return String(text ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/"/g, "&quot;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+function formatearFecha(fecha) {
+
+    if (!fecha) {
+
+        return "";
+
+    }
+
+
+    const partes =
+        fecha.split("-");
+
+
+    if (partes.length !== 3) {
+
+        return fecha;
+
+    }
+
+
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+
 }
 
+
+// ==========================================
+// INICIAR CARGA
+// ==========================================
 
 cargarBanderas();
 
 
-// ======================================================
-// GOOGLE MAPS
-// ======================================================
+// ==========================================
+// NAVEGACIÓN HACIA UNA BANDERA
+// ==========================================
 
-function findFlag(lat, lng) {
+function findFlag(
+    lat,
+    lng
+) {
 
     const url =
         `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
-    window.open(url, "_blank");
+
+    window.open(
+        url,
+        "_blank"
+    );
+
 }
 
 
-// ======================================================
+// ==========================================
 // BUSCADOR
-// ======================================================
+// ==========================================
 
 const searchInput =
-    document.getElementById("searchInput");
-
-searchInput.addEventListener("input", () => {
-
-    const texto =
-        searchInput.value
-            .toLowerCase()
-            .trim();
-
-    if (!texto) {
-        return;
-    }
-
-    const resultado = markers.find(item => {
-
-        const municipio =
-            item.bandera.municipio
-                .toLowerCase();
-
-        const provincia =
-            item.bandera.provincia
-                .toLowerCase();
-
-        return (
-            municipio.includes(texto) ||
-            provincia.includes(texto)
-        );
-    });
-
-    if (resultado) {
-
-        map.setView(
-            [
-                resultado.bandera.latitud,
-                resultado.bandera.longitud
-            ],
-            12
-        );
-
-        resultado.marker.openPopup();
-    }
-});
+    document.getElementById(
+        "searchInput"
+    );
 
 
-// ======================================================
-// MODAL
-// ======================================================
+if (searchInput) {
+
+    searchInput.addEventListener(
+        "input",
+        function() {
+
+            const texto =
+                searchInput.value
+                    .toLowerCase()
+                    .trim();
+
+
+            if (!texto) {
+
+                return;
+
+            }
+
+
+            const resultados =
+                markers.filter(
+                    item => {
+
+                        const municipio =
+                            (
+                                item.bandera.municipio ||
+                                ""
+                            )
+                                .toLowerCase();
+
+
+                        const provincia =
+                            (
+                                item.bandera.provincia ||
+                                ""
+                            )
+                                .toLowerCase();
+
+
+                        return (
+                            municipio.includes(
+                                texto
+                            )
+                            ||
+                            provincia.includes(
+                                texto
+                            )
+                        );
+
+                    }
+                );
+
+
+            if (
+                resultados.length === 0
+            ) {
+
+                return;
+
+            }
+
+
+            // Si hay varias coincidencias,
+            // usamos la primera.
+            const resultado =
+                resultados[0];
+
+
+            map.setView(
+                [
+                    resultado.bandera.latitud,
+                    resultado.bandera.longitud
+                ],
+                12
+            );
+
+
+            resultado.marker.openPopup();
+
+        }
+    );
+
+}
+
+
+// ==========================================
+// MODAL DEL FORMULARIO
+// ==========================================
 
 const submitModal =
-    document.getElementById("submitModal");
+    document.getElementById(
+        "submitModal"
+    );
+
 
 const flagForm =
-    document.getElementById("flagForm");
+    document.getElementById(
+        "flagForm"
+    );
+
 
 const formMessage =
-    document.getElementById("formMessage");
+    document.getElementById(
+        "formMessage"
+    );
 
 
 function abrirFormulario() {
 
-    submitModal.style.display = "flex";
+    if (!submitModal) {
 
-    setTimeout(() => {
+        return;
 
-        locationMap.invalidateSize();
+    }
 
-    }, 250);
+
+    submitModal.style.display =
+        "flex";
+
+
+    // Leaflet necesita recalcular
+    // el tamaño cuando el mapa
+    // aparece dentro del modal.
+    setTimeout(
+        function() {
+
+            if (
+                locationMap
+            ) {
+
+                locationMap.invalidateSize();
+
+            }
+
+        },
+        150
+    );
+
 }
 
 
 function cerrarFormulario() {
 
-    submitModal.style.display = "none";
+    if (!submitModal) {
+
+        return;
+
+    }
+
+
+    submitModal.style.display =
+        "none";
+
 }
 
 
-// ======================================================
-// MAPA PARA ELEGIR UBICACIÓN
-// ======================================================
+// ==========================================
+// CERRAR AL PULSAR FUERA
+// ==========================================
+
+if (submitModal) {
+
+    submitModal.addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target ===
+                submitModal
+            ) {
+
+                cerrarFormulario();
+
+            }
+
+        }
+    );
+
+}
+
+
+// ==========================================
+// MAPA DEL FORMULARIO
+// ==========================================
 
 const locationMap =
-    L.map("locationMap");
+    L.map(
+        "locationMap",
+        {
+            zoomControl: true
+        }
+    );
+
 
 L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution:
+            "&copy; OpenStreetMap contributors"
     }
 ).addTo(locationMap);
 
+
+// Vista inicial
 locationMap.setView(
     [40.2, -3.7],
     6
 );
 
 
+// ==========================================
+// VARIABLES DE UBICACIÓN
+// ==========================================
+
 let selectedLat = null;
 let selectedLng = null;
+
 let locationMarker = null;
 
 
-locationMap.on("click", event => {
+// ==========================================
+// CLICK / TOQUE EN EL MAPA
+// ==========================================
 
-    seleccionarUbicacion(
-        event.latlng.lat,
-        event.latlng.lng
-    );
-});
+locationMap.on(
+    "click",
+    function(event) {
+
+        seleccionarUbicacion(
+            event.latlng.lat,
+            event.latlng.lng
+        );
+
+    }
+);
 
 
-function seleccionarUbicacion(lat, lng) {
+// ==========================================
+// SELECCIONAR UBICACIÓN
+// ==========================================
 
-    selectedLat = lat;
-    selectedLng = lng;
+function seleccionarUbicacion(
+    lat,
+    lng
+) {
 
+    selectedLat = Number(lat);
+    selectedLng = Number(lng);
+
+
+    // Si ya existe marcador,
+    // simplemente lo movemos.
     if (locationMarker) {
 
         locationMarker.setLatLng([
-            lat,
-            lng
+            selectedLat,
+            selectedLng
         ]);
 
     } else {
 
-        locationMarker = L.marker(
-            [lat, lng],
-            {
-                draggable: true
-            }
-        ).addTo(locationMap);
+        locationMarker =
+            L.marker(
+                [
+                    selectedLat,
+                    selectedLng
+                ],
+                {
+                    draggable: true
+                }
+            ).addTo(
+                locationMap
+            );
 
+
+        // Permitir arrastrarlo
         locationMarker.on(
             "dragend",
-            event => {
+            function(event) {
 
                 const position =
                     event.target.getLatLng();
+
 
                 seleccionarUbicacion(
                     position.lat,
                     position.lng
                 );
+
             }
         );
+
     }
 
-    document.getElementById(
-        "locationStatus"
-    ).textContent =
-        "Ubicación seleccionada ✓";
+
+    // Centrar suavemente
+    // si el usuario ha seleccionado
+    // un punto.
+    locationMap.panTo(
+        [
+            selectedLat,
+            selectedLng
+        ]
+    );
+
+
+    actualizarEstadoUbicacion();
+
 }
 
 
-// ======================================================
-// GEOLOCALIZACIÓN
-// ======================================================
+// ==========================================
+// TEXTO DE UBICACIÓN
+// ==========================================
+
+function actualizarEstadoUbicacion() {
+
+    const locationStatus =
+        document.getElementById(
+            "locationStatus"
+        );
+
+
+    if (!locationStatus) {
+
+        return;
+
+    }
+
+
+    if (
+        selectedLat === null ||
+        selectedLng === null
+    ) {
+
+        locationStatus.textContent =
+            "Haz clic o toca el mapa para elegirla";
+
+        return;
+
+    }
+
+
+    locationStatus.textContent =
+        "Ubicación seleccionada ✓";
+
+}
+
+
+// ==========================================
+// BOTÓN "USAR MI UBICACIÓN"
+// ==========================================
 
 const useLocationButton =
     document.getElementById(
@@ -327,434 +674,379 @@ const useLocationButton =
     );
 
 
-useLocationButton.addEventListener(
-    "click",
-    () => {
+if (useLocationButton) {
 
-        if (!navigator.geolocation) {
+    useLocationButton.addEventListener(
+        "click",
+        obtenerUbicacion
+    );
 
-            alert(
-                "Tu navegador no permite obtener la ubicación."
+}
+
+
+function obtenerUbicacion() {
+
+    if (
+        !navigator.geolocation
+    ) {
+
+        alert(
+            "Tu navegador no permite obtener la ubicación. Puedes señalarla manualmente en el mapa."
+        );
+
+        return;
+
+    }
+
+
+    useLocationButton.disabled =
+        true;
+
+
+    useLocationButton.textContent =
+        "📍 Obteniendo ubicación...";
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position) {
+
+            const lat =
+                position.coords.latitude;
+
+            const lng =
+                position.coords.longitude;
+
+
+            seleccionarUbicacion(
+                lat,
+                lng
             );
 
-            return;
-        }
 
-        useLocationButton.disabled = true;
-
-        useLocationButton.textContent =
-            "📍 Obteniendo...";
-
-        navigator.geolocation.getCurrentPosition(
-
-            position => {
-
-                const lat =
-                    position.coords.latitude;
-
-                const lng =
-                    position.coords.longitude;
-
-                seleccionarUbicacion(
+            locationMap.setView(
+                [
                     lat,
                     lng
-                );
-
-                locationMap.setView(
-                    [lat, lng],
-                    16
-                );
-
-                useLocationButton.disabled = false;
-
-                useLocationButton.textContent =
-                    "📍 Usar mi ubicación";
-            },
-
-            error => {
-
-                console.error(
-                    "Error de geolocalización:",
-                    error
-                );
-
-                alert(
-                    "No se ha podido obtener tu ubicación. Puedes seleccionar el punto manualmente."
-                );
-
-                useLocationButton.disabled = false;
-
-                useLocationButton.textContent =
-                    "📍 Usar mi ubicación";
-            },
-
-            {
-                enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 60000
-            }
-        );
-    }
-);
-
-
-// ======================================================
-// FOTO
-// ======================================================
-
-const fotoInput =
-    document.getElementById("foto");
-
-const photoPreview =
-    document.getElementById("photoPreview");
-
-
-fotoInput.addEventListener(
-    "change",
-    () => {
-
-        photoPreview.innerHTML = "";
-
-        const file =
-            fotoInput.files[0];
-
-        if (!file) {
-            return;
-        }
-
-        const image =
-            document.createElement("img");
-
-        image.src =
-            URL.createObjectURL(file);
-
-        image.alt =
-            "Vista previa de la bandera";
-
-        photoPreview.appendChild(image);
-    }
-);
-
-
-// ======================================================
-// ENVIAR BANDERA
-// ======================================================
-
-flagForm.addEventListener(
-    "submit",
-    async event => {
-
-        event.preventDefault();
-
-        formMessage.textContent =
-            "Preparando envío...";
-
-
-        const municipio =
-            document.getElementById(
-                "municipio"
-            ).value.trim();
-
-
-        const provincia =
-            document.getElementById(
-                "provincia"
-            ).value.trim();
-
-
-        const fechaVista =
-            document.getElementById(
-                "fechaVista"
-            ).value;
-
-
-        const descripcion =
-            document.getElementById(
-                "descripcion"
-            ).value.trim();
-
-
-        const foto =
-            fotoInput.files[0];
-
-
-        // ----------------------------------------------
-        // VALIDACIONES
-        // ----------------------------------------------
-
-        if (
-            selectedLat === null ||
-            selectedLng === null
-        ) {
-
-            formMessage.textContent =
-                "❌ Selecciona dónde viste la bandera.";
-
-            return;
-        }
-
-
-        if (!foto) {
-
-            formMessage.textContent =
-                "❌ Necesitamos una foto de la bandera.";
-
-            return;
-        }
-
-
-        if (
-            foto.size >
-            10 * 1024 * 1024
-        ) {
-
-            formMessage.textContent =
-                "❌ La foto no puede superar los 10 MB.";
-
-            return;
-        }
-
-
-        if (
-            !foto.type.startsWith("image/")
-        ) {
-
-            formMessage.textContent =
-                "❌ El archivo debe ser una imagen.";
-
-            return;
-        }
-
-
-        if (
-            selectedLat < 35 ||
-            selectedLat > 44 ||
-            selectedLng < -10 ||
-            selectedLng > 5
-        ) {
-
-            formMessage.textContent =
-                "❌ La ubicación parece estar fuera de España.";
-
-            return;
-        }
-
-
-        try {
-
-            // ------------------------------------------
-            // SUBIR FOTO
-            // ------------------------------------------
-
-            formMessage.textContent =
-                "📸 Subiendo fotografía...";
-
-
-            const extension =
-                foto.name
-                    .split(".")
-                    .pop()
-                    .toLowerCase();
-
-
-            const nombreArchivo =
-                `${crypto.randomUUID()}.${extension}`;
-
-
-            const ruta =
-                `pendientes/${nombreArchivo}`;
-
-
-            const {
-                error: uploadError
-            } =
-                await supabaseClient
-                    .storage
-                    .from("banderas-fotos")
-                    .upload(
-                        ruta,
-                        foto,
-                        {
-                            cacheControl: "3600",
-                            upsert: false,
-                            contentType: foto.type
-                        }
-                    );
-
-
-            if (uploadError) {
-
-                console.error(
-                    "ERROR SUBIENDO FOTO:",
-                    uploadError
-                );
-
-                throw uploadError;
-            }
-
-
-            // ------------------------------------------
-            // URL DE LA FOTO
-            // ------------------------------------------
-
-            const {
-                data: publicData
-            } =
-                supabaseClient
-                    .storage
-                    .from("banderas-fotos")
-                    .getPublicUrl(ruta);
-
-
-            const fotoUrl =
-                publicData.publicUrl;
-
-
-            // ------------------------------------------
-            // GUARDAR BANDERA
-            // ------------------------------------------
-
-            formMessage.textContent =
-                "📍 Guardando registro...";
-
-
-            const {
-                data,
-                error
-            } =
-                await supabaseClient
-                    .from("banderas")
-                    .insert({
-                        municipio,
-                        provincia,
-                        latitud: selectedLat,
-                        longitud: selectedLng,
-                        fecha_vista: fechaVista,
-                        descripcion,
-                        foto_url: fotoUrl,
-
-                        // TODAS LAS NUEVAS BANDERAS
-                        // empiezan ocultas
-                        estado: "oculto"
-                    })
-                    .select()
-                    .single();
-
-
-            if (error) {
-
-                console.error(
-                    "ERROR GUARDANDO BANDERA:",
-                    error
-                );
-
-                throw error;
-            }
-
-
-            console.log(
-                "Bandera creada:",
-                data
+                ],
+                16
             );
 
 
-            // ------------------------------------------
-            // ÉXITO
-            // ------------------------------------------
+            useLocationButton.disabled =
+                false;
+
+
+            useLocationButton.textContent =
+                "📍 Usar mi ubicación";
+
+        },
+
+
+        function(error) {
+
+            console.error(
+                "Error de geolocalización:",
+                error
+            );
+
+
+            alert(
+                "No hemos podido obtener tu ubicación. Puedes señalarla manualmente en el mapa."
+            );
+
+
+            useLocationButton.disabled =
+                false;
+
+
+            useLocationButton.textContent =
+                "📍 Usar mi ubicación";
+
+        },
+
+
+        {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 60000
+        }
+
+    );
+
+}
+
+
+// ==========================================
+// ENVIAR FORMULARIO
+// ==========================================
+
+if (flagForm) {
+
+    flagForm.addEventListener(
+        "submit",
+        enviarBandera
+    );
+
+}
+
+
+async function enviarBandera(
+    event
+) {
+
+    event.preventDefault();
+
+
+    formMessage.textContent =
+        "Enviando bandera...";
+
+
+    formMessage.style.color =
+        "";
+
+
+    // ======================================
+    // DATOS DEL FORMULARIO
+    // ======================================
+
+    const municipio =
+        document
+            .getElementById(
+                "municipio"
+            )
+            .value
+            .trim();
+
+
+    const provincia =
+        document
+            .getElementById(
+                "provincia"
+            )
+            .value
+            .trim();
+
+
+    const fechaVista =
+        document
+            .getElementById(
+                "fechaVista"
+            )
+            .value;
+
+
+    const descripcion =
+        document
+            .getElementById(
+                "descripcion"
+            )
+            .value
+            .trim();
+
+
+    // ======================================
+    // COMPROBAR UBICACIÓN
+    // ======================================
+
+    if (
+        selectedLat === null ||
+        selectedLng === null
+    ) {
+
+        formMessage.textContent =
+            "❌ Primero señala aproximadamente dónde viste la bandera.";
+
+        return;
+
+    }
+
+
+    if (
+        !Number.isFinite(
+            selectedLat
+        )
+        ||
+        !Number.isFinite(
+            selectedLng
+        )
+    ) {
+
+        formMessage.textContent =
+            "❌ La ubicación seleccionada no es válida.";
+
+        return;
+
+    }
+
+
+    // ======================================
+    // COMPROBAR ESPAÑA
+    // ======================================
+
+    if (
+
+        selectedLat < 35 ||
+        selectedLat > 44 ||
+        selectedLng < -10 ||
+        selectedLng > 5
+
+    ) {
+
+        formMessage.textContent =
+            "❌ La ubicación parece estar fuera de España.";
+
+        return;
+
+    }
+
+
+    // ======================================
+    // ENVIAR A SUPABASE
+    // ======================================
+
+    try {
+
+        const { error } =
+            await supabaseClient
+                .from("banderas")
+                .insert({
+
+                    municipio:
+                        municipio,
+
+                    provincia:
+                        provincia,
+
+                    latitud:
+                        selectedLat,
+
+                    longitud:
+                        selectedLng,
+
+                    fecha_vista:
+                        fechaVista,
+
+                    descripcion:
+                        descripcion,
+
+                    estado:
+                        "revision"
+
+                });
+
+
+        if (error) {
+
+            console.error(
+                "Error Supabase:",
+                error
+            );
+
 
             formMessage.textContent =
-                "✅ ¡Enviado! Revisaremos la foto y la ubicación.";
+                "❌ No se pudo enviar la bandera.";
+
+            return;
+
+        }
 
 
-            flagForm.reset();
+        // ==================================
+        // ÉXITO
+        // ==================================
 
-            selectedLat = null;
-            selectedLng = null;
-
-
-            if (locationMarker) {
-
-                locationMap.removeLayer(
-                    locationMarker
-                );
-
-                locationMarker = null;
-            }
+        formMessage.textContent =
+            "✅ ¡Bandera enviada! Ahora será revisada.";
 
 
-            document.getElementById(
-                "locationStatus"
-            ).textContent =
-                "Selecciona un punto del mapa";
+        // Limpiar formulario
+        flagForm.reset();
 
 
-            photoPreview.innerHTML = "";
+        // Limpiar ubicación
+        selectedLat = null;
+        selectedLng = null;
 
 
-            setTimeout(() => {
+        if (locationMarker) {
+
+            locationMap.removeLayer(
+                locationMarker
+            );
+
+            locationMarker = null;
+
+        }
+
+
+        actualizarEstadoUbicacion();
+
+
+        // Actualizar el mapa principal
+        await cargarBanderas();
+
+
+        // Cerrar después de un momento
+        setTimeout(
+            function() {
 
                 cerrarFormulario();
 
-                formMessage.textContent = "";
+                formMessage.textContent =
+                    "";
 
-            }, 2200);
-
-
-        } catch (error) {
-
-            console.error(
-                "ERROR COMPLETO:",
-                error
-            );
+            },
+            1800
+        );
 
 
-            let mensaje =
-                "❌ No se pudo enviar la bandera.";
+    } catch (error) {
+
+        console.error(
+            "Error inesperado:",
+            error
+        );
 
 
-            if (error?.message) {
+        formMessage.textContent =
+            "❌ Ha ocurrido un error al enviar la bandera.";
 
-                mensaje +=
-                    " " + error.message;
-            }
+    }
+
+}
 
 
-            formMessage.textContent =
-                mensaje;
-        }
+// ==========================================
+// EVITAR SCROLL ACCIDENTAL
+// EN EL MAPA DEL FORMULARIO
+// ==========================================
+
+locationMap.on(
+    "mousedown",
+    function() {
+
+        locationMap.dragging.enable();
+
     }
 );
 
 
-// ======================================================
-// CERRAR MODAL AL PULSAR FUERA
-// ======================================================
+// ==========================================
+// TECLA ESC PARA CERRAR MODAL
+// ==========================================
 
-submitModal.addEventListener(
-    "click",
-    event => {
+document.addEventListener(
+    "keydown",
+    function(event) {
 
         if (
-            event.target ===
-            submitModal
+            event.key === "Escape"
         ) {
 
             cerrarFormulario();
+
         }
-    }
-);
 
-
-// ======================================================
-// REDIMENSIONAR MAPAS
-// ======================================================
-
-window.addEventListener(
-    "resize",
-    () => {
-
-        map.invalidateSize();
-
-        locationMap.invalidateSize();
     }
 );
