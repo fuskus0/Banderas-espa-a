@@ -1,108 +1,272 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Banderas de España — Encuéntralas, explora y verifícalas."
+    >
 
     <title>Banderas de España</title>
 
-    <!-- Leaflet -->
-    <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
->
 
-    <link rel="stylesheet" href="style.css">
+    <!-- ================================= -->
+    <!-- LEAFLET                            -->
+    <!-- ================================= -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+
+    <!-- ================================= -->
+    <!-- ESTILOS                            -->
+    <!-- ================================= -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
 </head>
+
 
 <body>
 
+
+    <!-- ================================= -->
+    <!-- CABECERA                           -->
+    <!-- ================================= -->
+
     <header class="header">
+
         <div class="logo-area">
-            <div class="flag-icon">🇪🇸</div>
+
+            <div class="flag-icon">
+                🇪🇸
+            </div>
 
             <div>
-                <h1>BANDERAS DE ESPAÑA</h1>
-                <p>Encuéntralas. Explora. Verifícalas.</p>
+
+                <h1>
+                    BANDERAS DE ESPAÑA
+                </h1>
+
+                <p>
+                    Encuéntralas. Explora. Verifícalas.
+                </p>
+
             </div>
+
         </div>
 
-        <button class="submit-button" onclick="showDemoMessage()">
+
+        <button
+            class="submit-button"
+            onclick="showDemoMessage()"
+        >
             ＋ ENCONTRÉ UNA BANDERA
         </button>
+
     </header>
 
 
+
+    <!-- ================================= -->
+    <!-- CONTENIDO PRINCIPAL                -->
+    <!-- ================================= -->
+
     <main>
+
+
+        <!-- BUSCADOR -->
 
         <section class="search-area">
 
             <div class="search-box">
-                🔎
+
+                <span>
+                    🔎
+                </span>
+
                 <input
                     type="text"
                     id="searchInput"
                     placeholder="Buscar municipio o provincia..."
+                    autocomplete="off"
                 >
+
             </div>
 
+
+            <!-- LEYENDA -->
+
             <div class="legend">
-                <span>
-                    <i class="dot verified"></i>
-                    Verificadas
-                </span>
 
                 <span>
-                    <i class="dot review"></i>
-                    En revisión
+
+                    <i
+                        class="dot verified"
+                    ></i>
+
+                    Verificadas
+
                 </span>
+
+
+                <span>
+
+                    <i
+                        class="dot review"
+                    ></i>
+
+                    En revisión
+
+                </span>
+
             </div>
 
         </section>
 
+
+
+        <!-- ================================= -->
+        <!-- MAPA                               -->
+        <!-- ================================= -->
 
         <section class="map-container">
 
-            <div id="map"></div>
+            <div
+                id="map"
+            ></div>
+
 
             <div class="demo-warning">
-                ⚠️ MODO DEMO — Las ubicaciones mostradas son ficticias.
+
+                ⚠️ MODO DEMO — Las ubicaciones
+                mostradas son ficticias.
+
             </div>
 
         </section>
 
 
+
+        <!-- ================================= -->
+        <!-- INFORMACIÓN                        -->
+        <!-- ================================= -->
+
         <section class="info-section">
 
-            <h2>🇪🇸 Sobre el proyecto</h2>
+            <h2>
+                🇪🇸 Sobre Banderas de España
+            </h2>
+
 
             <p>
-                Banderas de España es un proyecto colaborativo para registrar
-                y descubrir banderas constitucionales españolas encontradas
-                por España.
+
+                Un proyecto colaborativo para
+                registrar, verificar y descubrir
+                banderas constitucionales de España.
+
             </p>
 
+
             <p>
-                Las ubicaciones publicadas son aproximadas. Nunca se pretende
-                publicar la dirección exacta de viviendas particulares.
+
+                Las ubicaciones publicadas serán
+                aproximadas para proteger la
+                privacidad de las viviendas
+                particulares.
+
             </p>
+
+
+            <div class="rules">
+
+                <h3>
+                    ¿Qué banderas son válidas?
+                </h3>
+
+                <p>
+                    ✅ Bandera constitucional actual
+                    de España.
+                </p>
+
+                <p>
+                    ❌ Banderas históricas.
+                </p>
+
+                <p>
+                    ❌ Bandera de la Segunda República.
+                </p>
+
+                <p>
+                    ❌ Banderas utilizadas durante
+                    la dictadura franquista.
+                </p>
+
+            </div>
 
         </section>
 
     </main>
 
 
+
+    <!-- ================================= -->
+    <!-- PIE DE PÁGINA                      -->
+    <!-- ================================= -->
+
     <footer>
+
         <p>
-            Banderas de España · Proyecto en desarrollo
+            🇪🇸 Banderas de España
         </p>
+
+        <p>
+            Proyecto en desarrollo
+        </p>
+
     </footer>
 
 
-    <!-- Leaflet -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <script src="script.js"></script>
+    <!-- ================================= -->
+    <!-- LIBRERÍAS JAVASCRIPT              -->
+    <!-- ================================= -->
+
+
+    <!-- Leaflet -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+
+
+    <!-- Supabase -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
+
+
+    <!-- Nuestro JavaScript -->
+
+    <script
+        src="script.js"
+    ></script>
+
 
 </body>
+
 </html>
