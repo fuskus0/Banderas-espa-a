@@ -26,6 +26,8 @@
 
     <main class="admin-container">
 
+        <!-- LOGIN -->
+
         <section class="admin-login" id="loginSection">
 
             <h2>🔐 Acceso de administrador</h2>
@@ -61,23 +63,52 @@
         </section>
 
 
-        <section class="admin-panel" id="adminPanel" style="display:none;">
+        <!-- PANEL -->
 
-            <h2>🛠️ Panel de administración</h2>
+        <section
+            class="admin-panel"
+            id="adminPanel"
+            style="display:none;"
+        >
 
-            <p id="welcomeMessage"></p>
+            <div class="admin-top">
 
-            <button id="logoutButton">
-                Cerrar sesión
-            </button>
+                <div>
+                    <h2>🛠️ Panel de administración</h2>
+
+                    <p id="welcomeMessage"></p>
+                </div>
+
+                <button id="logoutButton">
+                    Cerrar sesión
+                </button>
+
+            </div>
+
 
             <hr>
 
-            <h3>🚧 Próximamente</h3>
 
-            <p>
-                Aquí aparecerán las banderas pendientes de revisión.
-            </p>
+            <div class="pending-header">
+
+                <h3>
+                    🟡 Banderas en revisión
+                </h3>
+
+                <span id="pendingCount">
+                    0
+                </span>
+
+            </div>
+
+
+            <div id="pendingFlags">
+
+                <p>
+                    Cargando banderas...
+                </p>
+
+            </div>
 
         </section>
 
