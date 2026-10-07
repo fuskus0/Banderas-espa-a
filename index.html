@@ -39,7 +39,118 @@
 
 </head>
 
+<div id="submitModal" class="modal">
 
+    <div class="modal-content">
+
+        <button
+            class="close-modal"
+            onclick="cerrarFormulario()"
+        >
+            ×
+        </button>
+
+        <h2>🇪🇸 Registrar una bandera</h2>
+
+        <p class="modal-intro">
+            ¿Has encontrado una bandera constitucional de España?
+            Regístrala para que podamos revisarla.
+        </p>
+
+        <form id="flagForm">
+
+            <label>
+                Municipio
+            </label>
+
+            <input
+                type="text"
+                id="municipio"
+                placeholder="Ej. Valencia"
+                required
+            >
+
+
+            <label>
+                Provincia
+            </label>
+
+            <input
+                type="text"
+                id="provincia"
+                placeholder="Ej. Valencia"
+                required
+            >
+
+
+            <label>
+                Latitud aproximada
+            </label>
+
+            <input
+                type="number"
+                id="latitud"
+                step="any"
+                placeholder="Ej. 39.4699"
+                required
+            >
+
+
+            <label>
+                Longitud aproximada
+            </label>
+
+            <input
+                type="number"
+                id="longitud"
+                step="any"
+                placeholder="Ej. -0.3763"
+                required
+            >
+
+            <p class="privacy-note">
+                🔒 No introduzcas la dirección exacta de una vivienda.
+                La ubicación publicada debe ser aproximada.
+            </p>
+
+
+            <label>
+                Fecha en la que la viste
+            </label>
+
+            <input
+                type="date"
+                id="fechaVista"
+                required
+            >
+
+
+            <label>
+                Descripción
+            </label>
+
+            <textarea
+                id="descripcion"
+                placeholder="Cuéntanos dónde la encontraste o cualquier detalle útil..."
+                maxlength="1000"
+            ></textarea>
+
+
+            <button
+                type="submit"
+                class="send-flag-button"
+            >
+                🇪🇸 Enviar bandera
+            </button>
+
+            <p id="formMessage"></p>
+
+        </form>
+
+    </div>
+
+</div>
+    
 <body>
 
 
