@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Administración — Banderas de España</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="logo-area">
+            <div class="flag-icon">🇪🇸</div>
+
+            <div>
+                <h1>ADMINISTRACIÓN</h1>
+                <p>Banderas de España</p>
+            </div>
+        </div>
+    </header>
+
+
+    <main class="admin-container">
+
+        <section class="admin-login" id="loginSection">
+
+            <h2>🔐 Acceso de administrador</h2>
+
+            <p>
+                Inicia sesión para acceder a la administración.
+            </p>
+
+            <form id="loginForm">
+
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Correo electrónico"
+                    required
+                >
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Contraseña"
+                    required
+                >
+
+                <button type="submit">
+                    Iniciar sesión
+                </button>
+
+            </form>
+
+            <p id="loginMessage"></p>
+
+        </section>
+
+
+        <section class="admin-panel" id="adminPanel" style="display:none;">
+
+            <h2>🛠️ Panel de administración</h2>
+
+            <p id="welcomeMessage"></p>
+
+            <button id="logoutButton">
+                Cerrar sesión
+            </button>
+
+            <hr>
+
+            <h3>🚧 Próximamente</h3>
+
+            <p>
+                Aquí aparecerán las banderas pendientes de revisión.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="admin.js"></script>
+
+</body>
+
+</html>
