@@ -266,3 +266,71 @@ footer {
         padding: 30px 20px;
     }
 }
+
+/* ====================================
+   ADMINISTRACIÓN
+==================================== */
+
+.admin-container {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 20px;
+}
+
+.admin-login,
+.admin-panel {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+}
+
+.admin-login h2,
+.admin-panel h2 {
+    margin-bottom: 10px;
+}
+
+.admin-login p,
+.admin-panel p {
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+#loginForm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#loginForm input {
+    padding: 13px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+}
+
+#loginForm input:focus {
+    border-color: #c8102e;
+}
+
+#loginForm button,
+#logoutButton {
+    border: none;
+    background: #c8102e;
+    color: white;
+    padding: 13px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#loginForm button:hover,
+#logoutButton:hover {
+    background: #a90d27;
+}
+
+#loginMessage {
+    margin-top: 15px;
+}
