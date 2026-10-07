@@ -54,64 +54,43 @@ async function comprobarSesion() {
         data: {
             session
         }
-    } = await supabaseClient
-        .auth
-        .getSession();
-
+    } = await supabaseClient.auth.getSession();
 
     if (session) {
-
-        mostrarPanel(
-            session.user
-        );
-
+        mostrarPanel(session.user);
     } else {
-
         mostrarLogin();
-
     }
-
 }
 
 
 // ====================================
-// MOSTRAR LOGIN
+// LOGIN
 // ====================================
 
 function mostrarLogin() {
 
-    loginSection.style.display =
-        "block";
-
-    adminPanel.style.display =
-        "none";
+    loginSection.style.display = "block";
+    adminPanel.style.display = "none";
 
 }
 
 
-// ====================================
-// MOSTRAR PANEL
-// ====================================
-
 function mostrarPanel(usuario) {
 
-    loginSection.style.display =
-        "none";
-
-    adminPanel.style.display =
-        "block";
+    loginSection.style.display = "none";
+    adminPanel.style.display = "block";
 
     welcomeMessage.textContent =
         "Sesión iniciada como: " +
         usuario.email;
 
     cargarPendientes();
-
 }
 
 
 // ====================================
-// CARGAR BANDERAS EN REVISIÓN
+// CARGAR PENDIENTES
 // ====================================
 
 async function cargarPendientes() {
@@ -140,7 +119,6 @@ async function cargarPendientes() {
             "<p>❌ No se pudieron cargar las banderas.</p>";
 
         return;
-
     }
 
 
@@ -152,112 +130,135 @@ async function cargarPendientes() {
 
         pendingFlags.innerHTML = `
             <div class="empty-pending">
+
                 <div>🎉</div>
-                <h3>No hay banderas pendientes</h3>
+
+                <h3>
+                    No hay banderas pendientes
+                </h3>
+
                 <p>
                     Todas las banderas han sido revisadas.
                 </p>
+
             </div>
         `;
 
         return;
-
     }
 
 
     pendingFlags.innerHTML = "";
 
 
-    data.forEach(
-        bandera => {
+    data.forEach(bandera => {
 
-            const card =
-                document.createElement(
-                    "div"
-                );
+        const card =
+            document.createElement("div");
 
-            card.className =
-                "pending-card";
+        card.className =
+            "pending-card";
 
 
-            card.innerHTML = `
+        card.innerHTML = `
 
-                <div class="pending-card-header">
+            <div class="pending-card-header">
 
-                    <h3>
-                        🇪🇸 Bandera #${bandera.id}
-                    </h3>
+                <h3>
+                    🇪🇸 Bandera #${bandera.id}
+                </h3>
 
-                    <span class="review-badge">
-                        🟡 EN REVISIÓN
-                    </span>
+                <span class="review-badge">
+                    🟡 EN REVISIÓN
+                </span>
 
-                </div>
-
-
-                <div class="pending-info">
-
-                    <p>
-                        📍
-                        <strong>
-                            ${bandera.municipio}
-                        </strong>,
-                        ${bandera.provincia}
-                    </p>
-
-                    <p>
-                        📅 Vista:
-                        ${bandera.fecha_vista}
-                    </p>
-
-                    <p>
-                        🗺️ Coordenadas:
-                        ${bandera.latitud},
-                        ${bandera.longitud}
-                    </p>
-
-                    <p>
-                        📝
-                        ${
-                            bandera.descripcion ||
-                            "Sin descripción."
-                        }
-                    </p>
-
-                </div>
+            </div>
 
 
-                <div class="pending-actions">
+            <div class="pending-info">
 
-                    <button
-                        class="view-map-button"
-                        onclick="
-                            verEnMapa(
-                                ${bandera.latitud},
-                                ${bandera.longitud}
-                            )
-                        "
-                    >
-                        🗺️ Ver ubicación
-                    </button>
+                <p>
+                    📍
+                    <strong>
+                        ${bandera.municipio}
+                    </strong>,
+                    ${bandera.provincia}
+                </p>
 
-                </div>
+                <p>
+                    📅 Vista:
+                    ${bandera.fecha_vista}
+                </p>
 
-            `;
+                <p>
+                    🗺️ Coordenadas:
+                    ${bandera.latitud},
+                    ${bandera.longitud}
+                </p>
+
+                <p>
+                    📝
+                    ${
+                        bandera.descripcion ||
+                        "Sin descripción."
+                    }
+                </p>
+
+            </div>
 
 
-            pendingFlags.appendChild(
-                card
-            );
+            <div class="pending-actions">
 
-        }
-    );
+                <button
+                    class="view-map-button"
+                    onclick="
+                        verEnMapa(
+                            ${bandera.latitud},
+                            ${bandera.longitud}
+                        )
+                    "
+                >
+                    🗺️ Ver ubicación
+                </button>
+
+
+                <button
+                    class="verify-button"
+                    onclick="
+                        verificarBandera(
+                            ${bandera.id}
+                        )
+                    "
+                >
+                    🟢 Verificar
+                </button>
+
+
+                <button
+                    class="reject-button"
+                    onclick="
+                        rechazarBandera(
+                            ${bandera.id}
+                        )
+                    "
+                >
+                    ❌ Rechazar
+                </button>
+
+            </div>
+
+        `;
+
+
+        pendingFlags.appendChild(card);
+
+    });
 
 }
 
 
 // ====================================
-// VER UBICACIÓN
+// VER EN MAPA
 // ====================================
 
 function verEnMapa(lat, lng) {
@@ -269,6 +270,100 @@ function verEnMapa(lat, lng) {
         url,
         "_blank"
     );
+
+}
+
+
+// ====================================
+// VERIFICAR
+// ====================================
+
+async function verificarBandera(id) {
+
+    const confirmar =
+        confirm(
+            "¿Quieres verificar esta bandera?"
+        );
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabaseClient
+        .from("banderas")
+        .update({
+            estado: "verificada"
+        })
+        .eq("id", id);
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "❌ No se pudo verificar la bandera."
+        );
+
+        return;
+    }
+
+
+    alert(
+        "🟢 Bandera verificada correctamente."
+    );
+
+
+    cargarPendientes();
+
+}
+
+
+// ====================================
+// RECHAZAR
+// ====================================
+
+async function rechazarBandera(id) {
+
+    const confirmar =
+        confirm(
+            "¿Seguro que quieres rechazar esta bandera? Se eliminará del registro."
+        );
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabaseClient
+        .from("banderas")
+        .delete()
+        .eq("id", id);
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "❌ No se pudo rechazar la bandera."
+        );
+
+        return;
+    }
+
+
+    alert(
+        "❌ Bandera rechazada."
+    );
+
+
+    cargarPendientes();
 
 }
 
@@ -318,16 +413,12 @@ loginForm.addEventListener(
                 "❌ Correo o contraseña incorrectos.";
 
             return;
-
         }
 
 
-        loginMessage.textContent =
-            "";
+        loginMessage.textContent = "";
 
-        mostrarPanel(
-            data.user
-        );
+        mostrarPanel(data.user);
 
     }
 );
@@ -352,7 +443,7 @@ logoutButton.addEventListener(
 
 
 // ====================================
-// ARRANCAR
+// INICIAR
 // ====================================
 
 comprobarSesion();
