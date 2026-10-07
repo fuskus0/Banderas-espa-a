@@ -463,3 +463,40 @@ footer {
     }
 
 }
+
+.verify-button,
+.reject-button {
+    border: none;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+.verify-button {
+    background: #22a447;
+}
+
+.verify-button:hover {
+    background: #188638;
+}
+
+.reject-button {
+    background: #c8102e;
+}
+
+.reject-button:hover {
+    background: #a90d27;
+}
+
+.pending-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pending-actions button {
+    margin-left: 0;
+}
