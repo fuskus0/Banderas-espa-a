@@ -12,25 +12,19 @@
 
     <meta
         name="description"
-        content="Banderas de España — Encuéntralas, explora y verifícalas."
+        content="Banderas de España — Explora, encuentra y registra banderas constitucionales de España."
     >
 
     <title>Banderas de España</title>
 
-
-    <!-- ================================= -->
-    <!-- LEAFLET                            -->
-    <!-- ================================= -->
+    <!-- LEAFLET -->
 
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
 
-
-    <!-- ================================= -->
-    <!-- ESTILOS                            -->
-    <!-- ================================= -->
+    <!-- ESTILOS -->
 
     <link
         rel="stylesheet"
@@ -39,124 +33,13 @@
 
 </head>
 
-<div id="submitModal" class="modal">
 
-    <div class="modal-content">
-
-        <button
-            class="close-modal"
-            onclick="cerrarFormulario()"
-        >
-            ×
-        </button>
-
-        <h2>🇪🇸 Registrar una bandera</h2>
-
-        <p class="modal-intro">
-            ¿Has encontrado una bandera constitucional de España?
-            Regístrala para que podamos revisarla.
-        </p>
-
-        <form id="flagForm">
-
-            <label>
-                Municipio
-            </label>
-
-            <input
-                type="text"
-                id="municipio"
-                placeholder="Ej. Valencia"
-                required
-            >
-
-
-            <label>
-                Provincia
-            </label>
-
-            <input
-                type="text"
-                id="provincia"
-                placeholder="Ej. Valencia"
-                required
-            >
-
-
-            <label>
-                Latitud aproximada
-            </label>
-
-            <input
-                type="number"
-                id="latitud"
-                step="any"
-                placeholder="Ej. 39.4699"
-                required
-            >
-
-
-            <label>
-                Longitud aproximada
-            </label>
-
-            <input
-                type="number"
-                id="longitud"
-                step="any"
-                placeholder="Ej. -0.3763"
-                required
-            >
-
-            <p class="privacy-note">
-                🔒 No introduzcas la dirección exacta de una vivienda.
-                La ubicación publicada debe ser aproximada.
-            </p>
-
-
-            <label>
-                Fecha en la que la viste
-            </label>
-
-            <input
-                type="date"
-                id="fechaVista"
-                required
-            >
-
-
-            <label>
-                Descripción
-            </label>
-
-            <textarea
-                id="descripcion"
-                placeholder="Cuéntanos dónde la encontraste o cualquier detalle útil..."
-                maxlength="1000"
-            ></textarea>
-
-
-            <button
-                type="submit"
-                class="send-flag-button"
-            >
-                🇪🇸 Enviar bandera
-            </button>
-
-            <p id="formMessage"></p>
-
-        </form>
-
-    </div>
-
-</div>
-    
 <body>
 
 
-    <!-- ================================= -->
-    <!-- CABECERA                           -->
-    <!-- ================================= -->
+    <!-- ====================================
+         CABECERA
+    ===================================== -->
 
     <header class="header">
 
@@ -166,14 +49,14 @@
                 🇪🇸
             </div>
 
-            <div>
+            <div class="logo-text">
 
                 <h1>
                     BANDERAS DE ESPAÑA
                 </h1>
 
                 <p>
-                    Encuéntralas. Explora. Verifícalas.
+                    Encuéntralas · Explora · Verifícalas
                 </p>
 
             </div>
@@ -181,28 +64,37 @@
         </div>
 
 
-        <button class="submit-button" onclick="abrirFormulario()">
-    ＋ ENCONTRÉ UNA BANDERA
-</button>
+        <button
+            class="submit-button"
+            onclick="abrirFormulario()"
+        >
+
+            <span>＋</span>
+
+            ENCONTRÉ UNA BANDERA
+
+        </button>
 
     </header>
 
 
 
-    <!-- ================================= -->
-    <!-- CONTENIDO PRINCIPAL                -->
-    <!-- ================================= -->
+    <!-- ====================================
+         CONTENIDO PRINCIPAL
+    ===================================== -->
 
     <main>
 
 
-        <!-- BUSCADOR -->
+        <!-- ====================================
+             BARRA DEL MAPA
+        ===================================== -->
 
-        <section class="search-area">
+        <section class="map-toolbar">
 
             <div class="search-box">
 
-                <span>
+                <span class="search-icon">
                     🔎
                 </span>
 
@@ -216,52 +108,28 @@
             </div>
 
 
-            <!-- LEYENDA -->
-
             <div class="legend">
 
-                <span>
+                <div class="legend-item">
 
-                    <i
-                        class="dot verified"
-                    ></i>
+                    <span class="dot verified"></span>
 
-                    Verificadas
+                    <span>
+                        Verificadas
+                    </span>
 
-                </span>
-
-
-                <span>
-
-                    <i
-                        class="dot review"
-                    ></i>
-
-                    En revisión
-
-                </span>
-
-            </div>
-
-        </section>
+                </div>
 
 
+                <div class="legend-item">
 
-        <!-- ================================= -->
-        <!-- MAPA                               -->
-        <!-- ================================= -->
+                    <span class="dot review"></span>
 
-        <section class="map-container">
+                    <span>
+                        En revisión
+                    </span>
 
-            <div
-                id="map"
-            ></div>
-
-
-            <div class="demo-warning">
-
-                ⚠️ MODO DEMO — Las ubicaciones
-                mostradas son ficticias.
+                </div>
 
             </div>
 
@@ -269,59 +137,225 @@
 
 
 
-        <!-- ================================= -->
-        <!-- INFORMACIÓN                        -->
-        <!-- ================================= -->
+        <!-- ====================================
+             MAPA
+        ===================================== -->
 
-        <section class="info-section">
+        <section class="map-section">
 
-            <h2>
-                🇪🇸 Sobre Banderas de España
-            </h2>
+            <div id="map"></div>
 
 
-            <p>
+            <div class="map-message">
 
-                Un proyecto colaborativo para
-                registrar, verificar y descubrir
-                banderas constitucionales de España.
+                ⚠️ Las ubicaciones mostradas actualmente
+                incluyen registros de prueba.
 
-            </p>
+            </div>
 
-
-            <p>
-
-                Las ubicaciones publicadas serán
-                aproximadas para proteger la
-                privacidad de las viviendas
-                particulares.
-
-            </p>
+        </section>
 
 
-            <div class="rules">
 
-                <h3>
-                    ¿Qué banderas son válidas?
-                </h3>
+        <!-- ====================================
+             PRESENTACIÓN
+        ===================================== -->
 
-                <p>
-                    ✅ Bandera constitucional actual
-                    de España.
+        <section class="about-section">
+
+            <div class="about-content">
+
+                <span class="section-label">
+                    🇪🇸 PROYECTO
+                </span>
+
+
+                <h2>
+                    ¿Qué es Banderas de España?
+                </h2>
+
+
+                <p class="about-main">
+
+                    Una comunidad para descubrir y registrar
+                    banderas constitucionales de España
+                    que encontramos por todo el país.
+
                 </p>
 
-                <p>
-                    ❌ Banderas históricas.
-                </p>
 
-                <p>
-                    ❌ Bandera de la Segunda República.
-                </p>
+                <div class="about-grid">
 
-                <p>
-                    ❌ Banderas utilizadas durante
-                    la dictadura franquista.
-                </p>
+
+                    <div class="about-card">
+
+                        <div class="about-icon">
+                            🔎
+                        </div>
+
+                        <h3>
+                            Encuentra
+                        </h3>
+
+                        <p>
+                            Explora el mapa y descubre
+                            banderas registradas por otros usuarios.
+                        </p>
+
+                    </div>
+
+
+                    <div class="about-card">
+
+                        <div class="about-icon">
+                            📸
+                        </div>
+
+                        <h3>
+                            Registra
+                        </h3>
+
+                        <p>
+                            ¿Has encontrado una?
+                            Envíala para que pueda ser revisada.
+                        </p>
+
+                    </div>
+
+
+                    <div class="about-card">
+
+                        <div class="about-icon">
+                            🛡️
+                        </div>
+
+                        <h3>
+                            Verificamos
+                        </h3>
+
+                        <p>
+                            Revisamos los registros antes
+                            de marcarlos como verificados.
+                        </p>
+
+                    </div>
+
+
+                    <div class="about-card">
+
+                        <div class="about-icon">
+                            🧭
+                        </div>
+
+                        <h3>
+                            Intenta encontrarla
+                        </h3>
+
+                        <p>
+                            Ve hasta la zona indicada
+                            e intenta localizarla por ti mismo.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ====================================
+                     REGLAS
+                ===================================== -->
+
+                <div class="rules-box">
+
+                    <h3>
+                        ¿Qué banderas aceptamos?
+                    </h3>
+
+
+                    <div class="rule valid">
+
+                        <span>
+                            ✓
+                        </span>
+
+                        <p>
+                            <strong>
+                                Bandera constitucional actual
+                            </strong>
+
+                            <br>
+
+                            La bandera oficial actual
+                            de España.
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="rule invalid">
+
+                        <span>
+                            ×
+                        </span>
+
+                        <p>
+                            <strong>
+                                Banderas históricas
+                            </strong>
+
+                            <br>
+
+                            No se aceptan banderas de
+                            otras épocas.
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="rule invalid">
+
+                        <span>
+                            ×
+                        </span>
+
+                        <p>
+                            <strong>
+                                Bandera de la Segunda República
+                            </strong>
+
+                            <br>
+
+                            No forma parte del sistema
+                            de registros del proyecto.
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="rule invalid">
+
+                        <span>
+                            ×
+                        </span>
+
+                        <p>
+                            <strong>
+                                Banderas franquistas
+                            </strong>
+
+                            <br>
+
+                            No se aceptan versiones históricas
+                            utilizadas durante la dictadura.
+
+                        </p>
+
+                    </div>
+
+                </div>
 
             </div>
 
@@ -331,48 +365,253 @@
 
 
 
-    <!-- ================================= -->
-    <!-- PIE DE PÁGINA                      -->
-    <!-- ================================= -->
+    <!-- ====================================
+         MODAL — REGISTRAR BANDERA
+    ===================================== -->
+
+    <div
+        id="submitModal"
+        class="modal"
+    >
+
+        <div class="modal-content">
+
+
+            <button
+                class="close-modal"
+                onclick="cerrarFormulario()"
+                aria-label="Cerrar"
+            >
+                ×
+            </button>
+
+
+            <div class="modal-header">
+
+                <div class="modal-icon">
+                    🇪🇸
+                </div>
+
+                <div>
+
+                    <h2>
+                        Registrar una bandera
+                    </h2>
+
+                    <p>
+                        Cuéntanos dónde la encontraste.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <form id="flagForm">
+
+
+                <div class="form-row">
+
+
+                    <div class="form-group">
+
+                        <label for="municipio">
+                            Municipio
+                        </label>
+
+                        <input
+                            type="text"
+                            id="municipio"
+                            placeholder="Ej. Valencia"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="provincia">
+                            Provincia
+                        </label>
+
+                        <input
+                            type="text"
+                            id="provincia"
+                            placeholder="Ej. Valencia"
+                            required
+                        >
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        📍 Ubicación aproximada
+                    </label>
+
+                    <div class="coordinates-row">
+
+                        <input
+                            type="number"
+                            id="latitud"
+                            step="any"
+                            placeholder="Latitud"
+                            required
+                        >
+
+                        <input
+                            type="number"
+                            id="longitud"
+                            step="any"
+                            placeholder="Longitud"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="privacy-note">
+
+                    🔒 <strong>Protección de privacidad</strong>
+
+                    <br>
+
+                    No introduzcas la dirección exacta
+                    de una vivienda. Utiliza una ubicación
+                    aproximada.
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="fechaVista">
+                        📅 ¿Cuándo la viste?
+                    </label>
+
+                    <input
+                        type="date"
+                        id="fechaVista"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="descripcion">
+                        📝 Descripción
+                    </label>
+
+                    <textarea
+                        id="descripcion"
+                        placeholder="Describe dónde la viste o cualquier detalle que pueda ayudarnos a identificarla..."
+                        maxlength="1000"
+                    ></textarea>
+
+                </div>
+
+
+                <div class="form-notice">
+
+                    <span>
+                        🟡
+                    </span>
+
+                    <p>
+                        Tu registro quedará
+                        <strong>en revisión</strong>
+                        hasta que sea comprobado.
+
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="send-flag-button"
+                >
+
+                    🇪🇸
+
+                    Enviar bandera
+
+                </button>
+
+
+                <p
+                    id="formMessage"
+                    class="form-message"
+                ></p>
+
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ====================================
+         FOOTER
+    ===================================== -->
 
     <footer>
 
-        <p>
-            🇪🇸 Banderas de España
-        </p>
+        <div class="footer-content">
 
-        <p>
-            Proyecto en desarrollo
-        </p>
+            <div>
+
+                <strong>
+                    🇪🇸 BANDERAS DE ESPAÑA
+                </strong>
+
+                <p>
+                    Proyecto colaborativo en desarrollo.
+                </p>
+
+            </div>
+
+
+            <div class="footer-right">
+
+                <span>
+                    Hecho para explorar España 🇪🇸
+                </span>
+
+            </div>
+
+        </div>
 
     </footer>
 
 
 
-    <!-- ================================= -->
-    <!-- LIBRERÍAS JAVASCRIPT              -->
-    <!-- ================================= -->
-
-
-    <!-- Leaflet -->
+    <!-- ====================================
+         SCRIPTS
+    ===================================== -->
 
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     ></script>
 
 
-    <!-- Supabase -->
-
     <script
         src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
     ></script>
 
 
-    <!-- Nuestro JavaScript -->
-
-    <script
-        src="script.js"
-    ></script>
+    <script src="script.js"></script>
 
 
 </body>
