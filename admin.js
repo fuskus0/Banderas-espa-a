@@ -37,6 +37,12 @@ const welcomeMessage =
 const logoutButton =
     document.getElementById("logoutButton");
 
+const pendingFlags =
+    document.getElementById("pendingFlags");
+
+const pendingCount =
+    document.getElementById("pendingCount");
+
 
 // ====================================
 // COMPROBAR SESIÓN
@@ -99,11 +105,176 @@ function mostrarPanel(usuario) {
         "Sesión iniciada como: " +
         usuario.email;
 
+    cargarPendientes();
+
 }
 
 
 // ====================================
-// INICIAR SESIÓN
+// CARGAR BANDERAS EN REVISIÓN
+// ====================================
+
+async function cargarPendientes() {
+
+    pendingFlags.innerHTML =
+        "<p>Cargando banderas...</p>";
+
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("banderas")
+        .select("*")
+        .eq("estado", "revision")
+        .order("creado_en", {
+            ascending: false
+        });
+
+
+    if (error) {
+
+        console.error(error);
+
+        pendingFlags.innerHTML =
+            "<p>❌ No se pudieron cargar las banderas.</p>";
+
+        return;
+
+    }
+
+
+    pendingCount.textContent =
+        data.length;
+
+
+    if (data.length === 0) {
+
+        pendingFlags.innerHTML = `
+            <div class="empty-pending">
+                <div>🎉</div>
+                <h3>No hay banderas pendientes</h3>
+                <p>
+                    Todas las banderas han sido revisadas.
+                </p>
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    pendingFlags.innerHTML = "";
+
+
+    data.forEach(
+        bandera => {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+            card.className =
+                "pending-card";
+
+
+            card.innerHTML = `
+
+                <div class="pending-card-header">
+
+                    <h3>
+                        🇪🇸 Bandera #${bandera.id}
+                    </h3>
+
+                    <span class="review-badge">
+                        🟡 EN REVISIÓN
+                    </span>
+
+                </div>
+
+
+                <div class="pending-info">
+
+                    <p>
+                        📍
+                        <strong>
+                            ${bandera.municipio}
+                        </strong>,
+                        ${bandera.provincia}
+                    </p>
+
+                    <p>
+                        📅 Vista:
+                        ${bandera.fecha_vista}
+                    </p>
+
+                    <p>
+                        🗺️ Coordenadas:
+                        ${bandera.latitud},
+                        ${bandera.longitud}
+                    </p>
+
+                    <p>
+                        📝
+                        ${
+                            bandera.descripcion ||
+                            "Sin descripción."
+                        }
+                    </p>
+
+                </div>
+
+
+                <div class="pending-actions">
+
+                    <button
+                        class="view-map-button"
+                        onclick="
+                            verEnMapa(
+                                ${bandera.latitud},
+                                ${bandera.longitud}
+                            )
+                        "
+                    >
+                        🗺️ Ver ubicación
+                    </button>
+
+                </div>
+
+            `;
+
+
+            pendingFlags.appendChild(
+                card
+            );
+
+        }
+    );
+
+}
+
+
+// ====================================
+// VER UBICACIÓN
+// ====================================
+
+function verEnMapa(lat, lng) {
+
+    const url =
+        `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+    window.open(
+        url,
+        "_blank"
+    );
+
+}
+
+
+// ====================================
+// LOGIN
 // ====================================
 
 loginForm.addEventListener(
@@ -134,8 +305,8 @@ loginForm.addEventListener(
         } = await supabaseClient
             .auth
             .signInWithPassword({
-                email: email,
-                password: password
+                email,
+                password
             });
 
 
