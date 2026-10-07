@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Banderas de España</title>
+
+    <!-- Leaflet -->
+    <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="logo-area">
+            <div class="flag-icon">🇪🇸</div>
+
+            <div>
+                <h1>BANDERAS DE ESPAÑA</h1>
+                <p>Encuéntralas. Explora. Verifícalas.</p>
+            </div>
+        </div>
+
+        <button class="submit-button" onclick="showDemoMessage()">
+            ＋ ENCONTRÉ UNA BANDERA
+        </button>
+    </header>
+
+
+    <main>
+
+        <section class="search-area">
+
+            <div class="search-box">
+                🔎
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Buscar municipio o provincia..."
+                >
+            </div>
+
+            <div class="legend">
+                <span>
+                    <i class="dot verified"></i>
+                    Verificadas
+                </span>
+
+                <span>
+                    <i class="dot review"></i>
+                    En revisión
+                </span>
+            </div>
+
+        </section>
+
+
+        <section class="map-container">
+
+            <div id="map"></div>
+
+            <div class="demo-warning">
+                ⚠️ MODO DEMO — Las ubicaciones mostradas son ficticias.
+            </div>
+
+        </section>
+
+
+        <section class="info-section">
+
+            <h2>🇪🇸 Sobre el proyecto</h2>
+
+            <p>
+                Banderas de España es un proyecto colaborativo para registrar
+                y descubrir banderas constitucionales españolas encontradas
+                por España.
+            </p>
+
+            <p>
+                Las ubicaciones publicadas son aproximadas. Nunca se pretende
+                publicar la dirección exacta de viviendas particulares.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+        <p>
+            Banderas de España · Proyecto en desarrollo
+        </p>
+    </footer>
+
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
