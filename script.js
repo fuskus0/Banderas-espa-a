@@ -48,11 +48,10 @@ const markers = [];
 
 async function cargarBanderas() {
 
-    const { data, error } =
-        await supabaseClient
-            .from("banderas")
-            .select("*")
-            .eq("estado", "verificada");
+    const { data, error } = await supabaseClient
+    .from("banderas")
+    .select("*")
+    .order("creado_en", { ascending: false });
 
 
     if (error) {
