@@ -3,109 +3,138 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Administración — Banderas de España</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <link rel="stylesheet" href="style.css">
+    <title>Administración · Banderas de España</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
 
 <body>
 
-    <header class="header">
-        <div class="logo-area">
-            <div class="flag-icon">🇪🇸</div>
-
-            <div>
-                <h1>ADMINISTRACIÓN</h1>
-                <p>Banderas de España</p>
-            </div>
-        </div>
-    </header>
-
-
     <main class="admin-container">
 
+        <!-- ========================= -->
         <!-- LOGIN -->
+        <!-- ========================= -->
 
-        <section class="admin-login" id="loginSection">
+        <section
+            id="loginSection"
+            class="admin-login"
+        >
 
-            <h2>🔐 Acceso de administrador</h2>
+            <div class="admin-login-box">
 
-            <p>
-                Inicia sesión para acceder a la administración.
-            </p>
+                <h1>🇪🇸 Administración</h1>
 
-            <form id="loginForm">
+                <p>
+                    Acceso exclusivo para administradores.
+                </p>
 
-                <input
-                    type="email"
-                    id="email"
-                    placeholder="Correo electrónico"
-                    required
-                >
+                <form id="loginForm">
 
-                <input
-                    type="password"
-                    id="password"
-                    placeholder="Contraseña"
-                    required
-                >
+                    <label for="email">
+                        Correo electrónico
+                    </label>
 
-                <button type="submit">
-                    Iniciar sesión
-                </button>
+                    <input
+                        id="email"
+                        type="email"
+                        autocomplete="username"
+                        required
+                    >
 
-            </form>
+                    <label for="password">
+                        Contraseña
+                    </label>
 
-            <p id="loginMessage"></p>
+                    <input
+                        id="password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="admin-login-button"
+                    >
+                        Iniciar sesión
+                    </button>
+
+                </form>
+
+                <p
+                    id="loginMessage"
+                    class="admin-message"
+                ></p>
+
+            </div>
 
         </section>
 
 
-        <!-- PANEL -->
+        <!-- ========================= -->
+        <!-- PANEL ADMIN -->
+        <!-- ========================= -->
 
         <section
-            class="admin-panel"
             id="adminPanel"
-            style="display:none;"
+            class="admin-panel"
+            style="display: none;"
         >
 
-            <div class="admin-top">
+            <header class="admin-header">
 
                 <div>
-                    <h2>🛠️ Panel de administración</h2>
+                    <h1>🇪🇸 Panel de administración</h1>
 
-                    <p id="welcomeMessage"></p>
+                    <p>
+                        Banderas pendientes de revisión
+                    </p>
                 </div>
 
-                <button id="logoutButton">
+                <button
+                    id="logoutButton"
+                    class="logout-button"
+                >
                     Cerrar sesión
                 </button>
 
+            </header>
+
+
+            <div class="admin-stats">
+
+                <div class="admin-stat">
+
+                    <span id="pendingCount">
+                        0
+                    </span>
+
+                    <small>
+                        Pendientes
+                    </small>
+
+                </div>
+
             </div>
 
 
-            <hr>
-
-
-            <div class="pending-header">
-
-                <h3>
-                    🟡 Banderas en revisión
-                </h3>
-
-                <span id="pendingCount">
-                    0
-                </span>
-
-            </div>
-
-
-            <div id="pendingFlags">
+            <div
+                id="pendingList"
+                class="pending-list"
+            >
 
                 <p>
-                    Cargando banderas...
+                    Inicia sesión para ver las banderas.
                 </p>
 
             </div>
@@ -115,8 +144,12 @@
     </main>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SUPABASE -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
 
+    <!-- NUESTRO JAVASCRIPT -->
     <script src="admin.js"></script>
 
 </body>
