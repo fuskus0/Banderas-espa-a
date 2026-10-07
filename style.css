@@ -500,3 +500,108 @@ footer {
 .pending-actions button {
     margin-left: 0;
 }
+
+/* ====================================
+   FORMULARIO DE BANDERAS
+==================================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 3000;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    width: 100%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+}
+
+.modal-content h2 {
+    margin-bottom: 8px;
+}
+
+.modal-intro {
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.close-modal {
+    position: absolute;
+    top: 12px;
+    right: 15px;
+    border: none;
+    background: none;
+    font-size: 30px;
+    cursor: pointer;
+    color: #555;
+}
+
+#flagForm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#flagForm label {
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+#flagForm input,
+#flagForm textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+#flagForm textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.privacy-note {
+    background: #fff7d6;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    color: #665500;
+    line-height: 1.4;
+}
+
+.send-flag-button {
+    border: none;
+    background: #c8102e;
+    color: white;
+    padding: 13px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 12px;
+}
+
+.send-flag-button:hover {
+    background: #a90d27;
+}
+
+#formMessage {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+}
