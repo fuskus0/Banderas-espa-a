@@ -167,6 +167,101 @@ function crearMarcador(bandera) {
 
     }
 
+// ==========================================
+// CREAR MARCADOR
+// ==========================================
+
+function crearMarcador(bandera) {
+
+    const marker = L.marker([
+        bandera.latitud,
+        bandera.longitud
+    ]).addTo(map);
+
+
+    // ======================================
+    // ESTADO
+    // ======================================
+
+    let estadoHTML = "";
+
+    if (bandera.estado === "revision") {
+
+        estadoHTML = `
+            <p class="flag-status-review">
+                🟡 EN REVISIÓN
+            </p>
+
+            <p class="flag-review-info">
+                Esta bandera ha sido registrada,
+                pero todavía no ha sido confirmada.
+            </p>
+        `;
+
+    } else if (bandera.estado === "verificada") {
+
+        estadoHTML = `
+            <p class="flag-status-verified">
+                🟢 VERIFICADA
+            </p>
+        `;
+
+    }
+
+
+    // ======================================
+    // POPUP
+    // ======================================
+
+    marker.bindPopup(`
+        <div class="flag-popup">
+
+            <h3>
+                🇪🇸 Bandera #${bandera.id}
+            </h3>
+
+            <p>
+                📍 ${escapeHtml(bandera.municipio)}
+            </p>
+
+            <p>
+                🗺️ ${escapeHtml(bandera.provincia)}
+            </p>
+
+            <p>
+                📅 ${formatearFecha(bandera.fecha_vista)}
+            </p>
+
+            ${estadoHTML}
+
+            <hr>
+
+            ${
+                bandera.descripcion
+                    ? `
+                        <p>
+                            ${escapeHtml(bandera.descripcion)}
+                        </p>
+                    `
+                    : ""
+            }
+
+            <button
+                onclick="findFlag(${bandera.latitud}, ${bandera.longitud})"
+            >
+                🧭 Intentar encontrarla
+            </button>
+
+        </div>
+    `);
+
+
+    markers.push({
+        marker: marker,
+        bandera: bandera
+    });
+
+}
 
     // ======================================
     // POPUP
