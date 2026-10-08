@@ -52,12 +52,9 @@ let todasLasBanderas = [];
 // ==========================================
 // CARGAR BANDERAS PÚBLICAS
 // ==========================================
-// Se muestran:
-// 🟡 revision
-// 🟢 verificada
-//
-// NO se muestran:
-// 🔴 oculta
+// 🟡 revision     → SÍ aparece
+// 🟢 verificada   → SÍ aparece
+// 🔴 oculta       → NO aparece
 // ==========================================
 
 async function cargarBanderas() {
