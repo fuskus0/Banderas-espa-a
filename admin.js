@@ -851,22 +851,37 @@ function crearTarjeta(
                 )}
             </p>
 
-            <a
-                class="admin-location-link"
-                href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(
-                    bandera.latitud
-                )}&mlon=${encodeURIComponent(
-                    bandera.longitud
-                )}#map=18/${encodeURIComponent(
-                    bandera.latitud
-                )}/${encodeURIComponent(
-                    bandera.longitud
-                )}"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                🧭 Abrir ubicación
-            </a>
+            <div class="admin-location-buttons">
+
+    <a
+        class="admin-location-link"
+        href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            bandera.latitud + "," + bandera.longitud
+        )}"
+        target="_blank"
+        rel="noopener noreferrer"
+    >
+        📍 Ver en Google Maps
+    </a>
+
+    <a
+        class="admin-location-link"
+        href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(
+            bandera.latitud
+        )}&mlon=${encodeURIComponent(
+            bandera.longitud
+        )}#map=18/${encodeURIComponent(
+            bandera.latitud
+        )}/${encodeURIComponent(
+            bandera.longitud
+        )}"
+        target="_blank"
+        rel="noopener noreferrer"
+    >
+        🗺️ Ver en OpenStreetMap
+    </a>
+
+</div>
 
         </div>
 
