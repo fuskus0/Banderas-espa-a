@@ -49,7 +49,7 @@ let todasLasBanderas = [];
 
 
 // ==========================================
-// CARGAR BANDERAS DESDE SUPABASE
+// CARGAR SOLO BANDERAS VERIFICADAS
 // ==========================================
 
 async function cargarBanderas() {
@@ -60,6 +60,7 @@ async function cargarBanderas() {
             await supabaseClient
                 .from("banderas")
                 .select("*")
+                .eq("estado", "verificada")
                 .order("creado_en", {
                     ascending: false
                 });
@@ -115,32 +116,6 @@ async function cargarBanderas() {
 
 function crearMarcador(bandera) {
 
-    let estadoTexto;
-    let estadoClase;
-
-
-    if (
-        bandera.estado ===
-        "verificada"
-    ) {
-
-        estadoTexto =
-            "🟢 VERIFICADA";
-
-        estadoClase =
-            "verified";
-
-    } else {
-
-        estadoTexto =
-            "🟡 EN REVISIÓN";
-
-        estadoClase =
-            "review";
-
-    }
-
-
     const marker =
         L.marker([
             bandera.latitud,
@@ -175,7 +150,7 @@ function crearMarcador(bandera) {
             </p>
 
             <p>
-                ${estadoTexto}
+                🟢 VERIFICADA
             </p>
 
             <hr>
@@ -376,8 +351,6 @@ if (searchInput) {
             }
 
 
-            // Si hay varias coincidencias,
-            // usamos la primera.
             const resultado =
                 resultados[0];
 
@@ -434,9 +407,6 @@ function abrirFormulario() {
         "flex";
 
 
-    // Leaflet necesita recalcular
-    // el tamaño cuando el mapa
-    // aparece dentro del modal.
     setTimeout(
         function() {
 
@@ -565,8 +535,6 @@ function seleccionarUbicacion(
     selectedLng = Number(lng);
 
 
-    // Si ya existe marcador,
-    // simplemente lo movemos.
     if (locationMarker) {
 
         locationMarker.setLatLng([
@@ -590,7 +558,6 @@ function seleccionarUbicacion(
             );
 
 
-        // Permitir arrastrarlo
         locationMarker.on(
             "dragend",
             function(event) {
@@ -610,9 +577,6 @@ function seleccionarUbicacion(
     }
 
 
-    // Centrar suavemente
-    // si el usuario ha seleccionado
-    // un punto.
     locationMap.panTo(
         [
             selectedLat,
@@ -930,8 +894,10 @@ async function enviarBandera(
                     descripcion:
                         descripcion,
 
+                    // NUEVO SISTEMA:
+                    // Toda bandera nueva empieza oculta.
                     estado:
-                        "revision"
+                        "oculta"
 
                 });
 
@@ -957,7 +923,7 @@ async function enviarBandera(
         // ==================================
 
         formMessage.textContent =
-            "✅ ¡Bandera enviada! Ahora será revisada.";
+            "✅ ¡Bandera enviada! Será revisada por un administrador.";
 
 
         // Limpiar formulario
@@ -983,7 +949,9 @@ async function enviarBandera(
         actualizarEstadoUbicacion();
 
 
-        // Actualizar el mapa principal
+        // Actualizar el mapa principal.
+        // La nueva bandera es "oculta",
+        // así que no aparecerá hasta estar verificada.
         await cargarBanderas();
 
 
