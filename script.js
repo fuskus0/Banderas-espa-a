@@ -1,6 +1,8 @@
-// ==========================================
-// CONFIGURACIÓN SUPABASE
-// ==========================================
+"use strict";
+
+/* ==================================================
+   CONFIGURACIÓN SUPABASE
+================================================== */
 
 const SUPABASE_URL =
     "https://yljxozttfnvyjrwrvcab.supabase.co";
@@ -8,255 +10,1059 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
     "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
 
+
+/* ==================================================
+   CLIENTE SUPABASE
+================================================== */
+
 const supabaseClient =
     supabase.createClient(
         SUPABASE_URL,
-        SUPABASE_KEY
+        SUPABASE_KEY,
+        {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        }
     );
 
 
-// ==========================================
-// MAPA PRINCIPAL
-// ==========================================
+/* ==================================================
+   ELEMENTOS
+================================================== */
 
-const map = L.map("map", {
-    zoomControl: true
-});
+const loginSection =
+    document.getElementById("loginSection");
 
-L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+const adminPanel =
+    document.getElementById("adminPanel");
+
+const loginForm =
+    document.getElementById("loginForm");
+
+const emailInput =
+    document.getElementById("email");
+
+const passwordInput =
+    document.getElementById("password");
+
+const loginMessage =
+    document.getElementById("loginMessage");
+
+const logoutButton =
+    document.getElementById("logoutButton");
+
+const pendingList =
+    document.getElementById("pendingList");
+
+const pendingCount =
+    document.getElementById("pendingCount");
+
+
+/* ==================================================
+   INICIO
+================================================== */
+
+iniciarAdmin();
+
+
+async function iniciarAdmin() {
+
+    mostrarLogin();
+
+    const resultado =
+        await supabaseClient.auth.getSession();
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR OBTENIENDO SESIÓN:",
+            resultado.error
+        );
+
+        return;
     }
-).addTo(map);
+
+    const session =
+        resultado.data.session;
 
 
-// Vista inicial de España
-map.setView(
-    [40.2, -3.7],
-    6
-);
+    /*
+       Si Supabase ya tiene una sesión guardada,
+       intentamos entrar directamente al panel.
+    */
+
+    if (session) {
+
+        console.log(
+            "Sesión encontrada. Comprobando administrador..."
+        );
+
+        await comprobarAdministrador();
+
+    } else {
+
+        console.log(
+            "No hay sesión guardada."
+        );
+
+        mostrarLogin();
+    }
+}
 
 
-// ==========================================
-// VARIABLES
-// ==========================================
+/* ==================================================
+   LOGIN
+================================================== */
 
-const markers = [];
+loginForm.addEventListener(
+    "submit",
+    async function (event) {
 
-let todasLasBanderas = [];
+        event.preventDefault();
 
+        const email =
+            emailInput.value.trim();
 
-// ==========================================
-// CARGAR BANDERAS DESDE SUPABASE
-// ==========================================
-
-async function cargarBanderas() {
-
-    try {
-
-        const { data, error } =
-            await supabaseClient
-                .from("banderas")
-                .select("*")
-                .order("creado_en", {
-                    ascending: false
-                });
+        const password =
+            passwordInput.value;
 
 
-        if (error) {
+        if (!email || !password) {
 
-            console.error(
-                "Error cargando las banderas:",
-                error
+            mostrarMensaje(
+                "Escribe tu correo y contraseña.",
+                true
             );
 
             return;
-
         }
 
 
-        todasLasBanderas = data || [];
+        mostrarMensaje(
+            "⏳ Iniciando sesión..."
+        );
 
 
-        // Limpiar marcadores anteriores
-        markers.forEach(item => {
+        const resultado =
+            await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
 
-            map.removeLayer(
-                item.marker
+
+        if (resultado.error) {
+
+            console.error(
+                "ERROR LOGIN:",
+                resultado.error
             );
 
-        });
+            mostrarMensaje(
+                "❌ " + resultado.error.message,
+                true
+            );
 
-        markers.length = 0;
+            return;
+        }
 
 
-        // Crear nuevos marcadores
-        todasLasBanderas.forEach(
-            crearMarcador
+        console.log(
+            "LOGIN CORRECTO",
+            resultado.data.user
         );
+
+
+        mostrarMensaje(
+            "⏳ Comprobando administrador..."
+        );
+
+
+        await comprobarAdministrador();
+    }
+);
+
+
+/* ==================================================
+   COMPROBAR ADMINISTRADOR
+================================================== */
+
+async function comprobarAdministrador() {
+
+    try {
+
+        const resultadoUsuario =
+            await supabaseClient.auth.getUser();
+
+
+        if (resultadoUsuario.error) {
+
+            console.error(
+                "ERROR OBTENIENDO USUARIO:",
+                resultadoUsuario.error
+            );
+
+            mostrarMensaje(
+                "❌ No se pudo obtener el usuario.",
+                true
+            );
+
+            mostrarLogin();
+
+            return;
+        }
+
+
+        const usuario =
+            resultadoUsuario.data.user;
+
+
+        if (!usuario) {
+
+            mostrarLogin();
+
+            return;
+        }
+
+
+        console.log(
+            "USUARIO:",
+            usuario.email
+        );
+
+
+        /*
+           Comprobamos directamente la tabla
+           admin_users.
+        */
+
+        const resultadoAdmin =
+            await supabaseClient
+                .from("admin_users")
+                .select("user_id")
+                .eq(
+                    "user_id",
+                    usuario.id
+                )
+                .maybeSingle();
+
+
+        if (resultadoAdmin.error) {
+
+            console.error(
+                "ERROR ADMIN_USERS:",
+                resultadoAdmin.error
+            );
+
+
+            mostrarMensaje(
+                "❌ No se ha podido comprobar el administrador.\n\n" +
+                resultadoAdmin.error.message,
+                true
+            );
+
+            mostrarLogin();
+
+            return;
+        }
+
+
+        if (!resultadoAdmin.data) {
+
+            mostrarMensaje(
+                "❌ Este usuario no es administrador.",
+                true
+            );
+
+
+            await supabaseClient.auth.signOut();
+
+            mostrarLogin();
+
+            return;
+        }
+
+
+        console.log(
+            "✅ ADMINISTRADOR CONFIRMADO"
+        );
+
+
+        mostrarPanel();
+
+
+        await cargarPendientes();
 
     } catch (error) {
 
         console.error(
-            "Error inesperado:",
+            "ERROR GENERAL:",
             error
         );
 
-    }
 
+        mostrarMensaje(
+            "❌ Error inesperado.",
+            true
+        );
+
+        mostrarLogin();
+    }
 }
 
 
-// ==========================================
-// CREAR MARCADOR
-// ==========================================
+/* ==================================================
+   CAMBIO DE SESIÓN
+================================================== */
 
-function crearMarcador(bandera) {
+supabaseClient.auth.onAuthStateChange(
+    async function (event, session) {
 
-    let estadoTexto;
-    let estadoClase;
+        console.log(
+            "CAMBIO DE AUTENTICACIÓN:",
+            event
+        );
 
 
-    if (
-        bandera.estado ===
-        "verificada"
-    ) {
+        if (
+            event === "SIGNED_IN" &&
+            session
+        ) {
 
-        estadoTexto =
-            "🟢 VERIFICADA";
+            await comprobarAdministrador();
 
-        estadoClase =
-            "verified";
+        }
 
-    } else {
 
-        estadoTexto =
-            "🟡 EN REVISIÓN";
+        if (
+            event === "SIGNED_OUT"
+        ) {
 
-        estadoClase =
-            "review";
+            mostrarLogin();
+        }
+    }
+);
 
+
+/* ==================================================
+   MOSTRAR LOGIN
+================================================== */
+
+function mostrarLogin() {
+
+    loginSection.style.display =
+        "block";
+
+    adminPanel.style.display =
+        "none";
+}
+
+
+/* ==================================================
+   MOSTRAR PANEL
+================================================== */
+
+function mostrarPanel() {
+
+    loginSection.style.display =
+        "none";
+
+    adminPanel.style.display =
+        "block";
+}
+
+
+/* ==================================================
+   MENSAJES
+================================================== */
+
+function mostrarMensaje(
+    texto,
+    error = false
+) {
+
+    loginMessage.textContent =
+        texto;
+
+    loginMessage.classList.toggle(
+        "admin-error",
+        error
+    );
+}
+
+
+/* ==================================================
+   CARGAR BANDERAS
+================================================== */
+
+async function cargarPendientes() {
+
+    pendingList.innerHTML =
+        `
+        <div class="admin-empty">
+            <div class="icon">⏳</div>
+            <h2>Cargando banderas...</h2>
+            <p>Estamos buscando las banderas pendientes.</p>
+        </div>
+        `;
+
+
+    /*
+       IMPORTANTE:
+
+       El administrador puede ver TODAS las banderas
+       gracias a la política RLS.
+
+       Después filtramos únicamente:
+       - oculta
+       - revision
+
+       Las verificadas no aparecen como pendientes.
+    */
+
+    const resultado =
+        await supabaseClient
+            .from("banderas")
+            .select("*")
+            .in(
+                "estado",
+                [
+                    "oculta",
+                    "revision"
+                ]
+            )
+            .order(
+                "creado_en",
+                {
+                    ascending: false
+                }
+            );
+
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR BANDERAS:",
+            resultado.error
+        );
+
+
+        pendingCount.textContent =
+            "0";
+
+
+        pendingList.innerHTML =
+            `
+            <div class="admin-empty admin-error">
+                <div class="icon">❌</div>
+                <h2>Error cargando las banderas</h2>
+                <p>
+                    ${escaparHTML(
+                        resultado.error.message
+                    )}
+                </p>
+            </div>
+            `;
+
+        return;
     }
 
 
-    const marker =
-        L.marker([
-            bandera.latitud,
-            bandera.longitud
-        ]).addTo(map);
+    const banderas =
+        resultado.data || [];
 
 
-    marker.bindPopup(`
+    /*
+       Contamos únicamente las que requieren
+       atención del administrador.
+    */
 
-        <div class="flag-popup">
+    pendingCount.textContent =
+        banderas.length;
 
-            <h3>
-                🇪🇸 Bandera #${bandera.id}
-            </h3>
+
+    if (banderas.length === 0) {
+
+        pendingList.innerHTML =
+            `
+            <div class="admin-empty">
+                <div class="icon">🎉</div>
+
+                <h2>No hay banderas pendientes</h2>
+
+                <p>
+                    No hay ninguna bandera oculta
+                    o en revisión actualmente.
+                </p>
+            </div>
+            `;
+
+        return;
+    }
+
+
+    /*
+       Separar por estado
+    */
+
+    const ocultas =
+        banderas.filter(
+            bandera =>
+                bandera.estado === "oculta"
+        );
+
+
+    const revision =
+        banderas.filter(
+            bandera =>
+                bandera.estado === "revision"
+        );
+
+
+    pendingList.innerHTML =
+        "";
+
+
+    /*
+       SECCIÓN OCULTAS
+    */
+
+    if (ocultas.length > 0) {
+
+        const titulo =
+            document.createElement("div");
+
+        titulo.className =
+            "admin-section-title";
+
+        titulo.innerHTML = `
+            <div>
+                <span class="admin-section-icon">
+                    🔴
+                </span>
+
+                <div>
+                    <h2>Banderas nuevas</h2>
+                    <p>
+                        Todavía no han sido revisadas.
+                    </p>
+                </div>
+            </div>
+
+            <strong>
+                ${ocultas.length}
+            </strong>
+        `;
+
+        pendingList.appendChild(titulo);
+
+
+        ocultas.forEach(
+            function (bandera) {
+
+                pendingList.appendChild(
+                    crearTarjetaBandera(
+                        bandera
+                    )
+                );
+            }
+        );
+    }
+
+
+    /*
+       SECCIÓN EN REVISIÓN
+    */
+
+    if (revision.length > 0) {
+
+        const titulo =
+            document.createElement("div");
+
+        titulo.className =
+            "admin-section-title";
+
+        titulo.innerHTML = `
+            <div>
+                <span class="admin-section-icon">
+                    🟡
+                </span>
+
+                <div>
+                    <h2>En revisión</h2>
+                    <p>
+                        Parecen legítimas, pero todavía
+                        no están confirmadas al 100%.
+                    </p>
+                </div>
+            </div>
+
+            <strong>
+                ${revision.length}
+            </strong>
+        `;
+
+        pendingList.appendChild(titulo);
+
+
+        revision.forEach(
+            function (bandera) {
+
+                pendingList.appendChild(
+                    crearTarjetaBandera(
+                        bandera
+                    )
+                );
+            }
+        );
+    }
+}
+
+
+/* ==================================================
+   CREAR TARJETA
+================================================== */
+
+function crearTarjetaBandera(
+    bandera
+) {
+
+    const tarjeta =
+        document.createElement("article");
+
+
+    tarjeta.className =
+        "admin-card";
+
+
+    const esOculta =
+        bandera.estado === "oculta";
+
+
+    const estadoHTML =
+        esOculta
+
+            ? `
+                <span class="admin-status hidden">
+                    🔴 OCULTA
+                </span>
+            `
+
+            : `
+                <span class="admin-status review">
+                    🟡 EN REVISIÓN
+                </span>
+            `;
+
+
+    let botones = "";
+
+
+    if (esOculta) {
+
+        botones = `
+            <button
+                class="admin-button secondary"
+                onclick="
+                    pasarARevision(${bandera.id})
+                "
+            >
+                🟡 Pasar a revisión
+            </button>
+
+            <button
+                class="admin-button success"
+                onclick="
+                    verificarBandera(${bandera.id})
+                "
+            >
+                🟢 Verificar
+            </button>
+
+            <button
+                class="admin-button danger"
+                onclick="
+                    rechazarBandera(${bandera.id})
+                "
+            >
+                ❌ Rechazar
+            </button>
+        `;
+
+    } else {
+
+        botones = `
+            <button
+                class="admin-button success"
+                onclick="
+                    verificarBandera(${bandera.id})
+                "
+            >
+                🟢 Verificar
+            </button>
+
+            <button
+                class="admin-button danger"
+                onclick="
+                    rechazarBandera(${bandera.id})
+                "
+            >
+                ❌ Rechazar
+            </button>
+        `;
+    }
+
+
+    tarjeta.innerHTML = `
+
+        <div class="admin-info">
+
+            <div class="admin-card-header">
+
+                <h3>
+                    🇪🇸 Bandera #${bandera.id}
+                </h3>
+
+                ${estadoHTML}
+
+            </div>
+
 
             <p>
-                📍 ${escapeHtml(
+                📍
+                <strong>Municipio:</strong>
+                ${escaparHTML(
                     bandera.municipio
                 )}
             </p>
 
+
             <p>
-                🗺️ ${escapeHtml(
+                🗺️
+                <strong>Provincia:</strong>
+                ${escaparHTML(
                     bandera.provincia
                 )}
             </p>
 
+
             <p>
-                📅 ${formatearFecha(
+                📅
+                <strong>Vista:</strong>
+                ${formatearFecha(
                     bandera.fecha_vista
                 )}
             </p>
 
+
             <p>
-                ${estadoTexto}
+                📝
+                <strong>Descripción:</strong><br>
+                ${escaparHTML(
+                    bandera.descripcion ||
+                    "Sin descripción."
+                )}
             </p>
 
-            <hr>
 
-            ${
-                bandera.descripcion
-                    ? `
-                        <p>
-                            ${escapeHtml(
-                                bandera.descripcion
-                            )}
-                        </p>
-                    `
-                    : ""
-            }
+            <p>
+                📌
+                <strong>Coordenadas:</strong>
+                ${escaparHTML(
+                    String(bandera.latitud)
+                )},
+                ${escaparHTML(
+                    String(bandera.longitud)
+                )}
+            </p>
 
-            <button
-                onclick="
-                    findFlag(
-                        ${bandera.latitud},
-                        ${bandera.longitud}
-                    )
+
+            <a
+                class="admin-location-link"
+                href="
+                    https://www.openstreetmap.org/
+                    ?mlat=${encodeURIComponent(
+                        bandera.latitud
+                    )}
+                    &mlon=${encodeURIComponent(
+                        bandera.longitud
+                    )}
+                    #map=18/${encodeURIComponent(
+                        bandera.latitud
+                    )}/${encodeURIComponent(
+                        bandera.longitud
+                    )}
                 "
+                target="_blank"
+                rel="noopener noreferrer"
             >
-                🧭 Intentar encontrarla
-            </button>
+                🧭 Abrir ubicación en el mapa
+            </a>
 
         </div>
 
-    `);
+
+        <div class="admin-actions">
+
+            ${botones}
+
+        </div>
+
+    `;
 
 
-    markers.push({
-        marker: marker,
-        bandera: bandera
-    });
-
+    return tarjeta;
 }
 
 
-// ==========================================
-// ESCAPAR TEXTO
-// ==========================================
+/* ==================================================
+   PASAR A REVISIÓN
+================================================== */
 
-function escapeHtml(text) {
+async function pasarARevision(
+    id
+) {
 
-    if (
-        text === null ||
-        text === undefined
-    ) {
-
-        return "";
-
-    }
-
-
-    const div =
-        document.createElement(
-            "div"
+    const confirmar =
+        confirm(
+            "¿Quieres pasar esta bandera a revisión?\n\n" +
+            "Seguirá oculta del mapa público."
         );
 
 
-    div.textContent =
-        String(text);
+    if (!confirmar) {
+        return;
+    }
 
 
-    return div.innerHTML;
+    const resultado =
+        await supabaseClient
+            .from("banderas")
+            .update({
+                estado: "revision"
+            })
+            .eq(
+                "id",
+                id
+            );
 
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR PASANDO A REVISIÓN:",
+            resultado.error
+        );
+
+
+        alert(
+            "❌ No se pudo cambiar el estado.\n\n" +
+            resultado.error.message
+        );
+
+
+        return;
+    }
+
+
+    await cargarPendientes();
 }
 
 
-// ==========================================
-// FORMATEAR FECHA
-// ==========================================
+/* ==================================================
+   VERIFICAR
+================================================== */
 
-function formatearFecha(fecha) {
+async function verificarBandera(
+    id
+) {
+
+    const confirmar =
+        confirm(
+            "¿Quieres verificar esta bandera?\n\n" +
+            "Pasará a estar visible públicamente en el mapa."
+        );
+
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const resultado =
+        await supabaseClient
+            .from("banderas")
+            .update({
+                estado: "verificada"
+            })
+            .eq(
+                "id",
+                id
+            );
+
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR VERIFICANDO:",
+            resultado.error
+        );
+
+
+        alert(
+            "❌ No se pudo verificar.\n\n" +
+            resultado.error.message
+        );
+
+
+        return;
+    }
+
+
+    await cargarPendientes();
+}
+
+
+/* ==================================================
+   RECHAZAR
+================================================== */
+
+async function rechazarBandera(
+    id
+) {
+
+    const confirmar =
+        confirm(
+            "¿Seguro que quieres rechazar esta bandera?\n\n" +
+            "Se eliminará permanentemente del registro."
+        );
+
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const resultado =
+        await supabaseClient
+            .from("banderas")
+            .delete()
+            .eq(
+                "id",
+                id
+            );
+
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR RECHAZANDO:",
+            resultado.error
+        );
+
+
+        alert(
+            "❌ No se pudo rechazar.\n\n" +
+            resultado.error.message
+        );
+
+
+        return;
+    }
+
+
+    await cargarPendientes();
+}
+
+
+/* ==================================================
+   CERRAR SESIÓN
+================================================== */
+
+logoutButton.addEventListener(
+    "click",
+    async function () {
+
+        const resultado =
+            await supabaseClient.auth.signOut();
+
+
+        if (resultado.error) {
+
+            console.error(
+                "ERROR CERRANDO SESIÓN:",
+                resultado.error
+            );
+
+            alert(
+                "❌ No se pudo cerrar la sesión."
+            );
+
+            return;
+        }
+
+
+        emailInput.value =
+            "";
+
+        passwordInput.value =
+            "";
+
+
+        mostrarMensaje(
+            ""
+        );
+
+
+        mostrarLogin();
+    }
+);
+
+
+/* ==================================================
+   ESCAPAR HTML
+================================================== */
+
+function escaparHTML(
+    texto
+) {
+
+    return String(texto)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+/* ==================================================
+   FECHA
+================================================== */
+
+function formatearFecha(
+    fecha
+) {
 
     if (!fecha) {
-
-        return "";
-
+        return "Sin fecha";
     }
 
 
@@ -265,788 +1071,15 @@ function formatearFecha(fecha) {
 
 
     if (partes.length !== 3) {
-
         return fecha;
-
     }
 
 
-    return `${partes[2]}/${partes[1]}/${partes[0]}`;
-
+    return (
+        partes[2] +
+        "/" +
+        partes[1] +
+        "/" +
+        partes[0]
+    );
 }
-
-
-// ==========================================
-// INICIAR CARGA
-// ==========================================
-
-cargarBanderas();
-
-
-// ==========================================
-// NAVEGACIÓN HACIA UNA BANDERA
-// ==========================================
-
-function findFlag(
-    lat,
-    lng
-) {
-
-    const url =
-        `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-
-
-    window.open(
-        url,
-        "_blank"
-    );
-
-}
-
-
-// ==========================================
-// BUSCADOR
-// ==========================================
-
-const searchInput =
-    document.getElementById(
-        "searchInput"
-    );
-
-
-if (searchInput) {
-
-    searchInput.addEventListener(
-        "input",
-        function() {
-
-            const texto =
-                searchInput.value
-                    .toLowerCase()
-                    .trim();
-
-
-            if (!texto) {
-
-                return;
-
-            }
-
-
-            const resultados =
-                markers.filter(
-                    item => {
-
-                        const municipio =
-                            (
-                                item.bandera.municipio ||
-                                ""
-                            )
-                                .toLowerCase();
-
-
-                        const provincia =
-                            (
-                                item.bandera.provincia ||
-                                ""
-                            )
-                                .toLowerCase();
-
-
-                        return (
-                            municipio.includes(
-                                texto
-                            )
-                            ||
-                            provincia.includes(
-                                texto
-                            )
-                        );
-
-                    }
-                );
-
-
-            if (
-                resultados.length === 0
-            ) {
-
-                return;
-
-            }
-
-
-            // Si hay varias coincidencias,
-            // usamos la primera.
-            const resultado =
-                resultados[0];
-
-
-            map.setView(
-                [
-                    resultado.bandera.latitud,
-                    resultado.bandera.longitud
-                ],
-                12
-            );
-
-
-            resultado.marker.openPopup();
-
-        }
-    );
-
-}
-
-
-// ==========================================
-// MODAL DEL FORMULARIO
-// ==========================================
-
-const submitModal =
-    document.getElementById(
-        "submitModal"
-    );
-
-
-const flagForm =
-    document.getElementById(
-        "flagForm"
-    );
-
-
-const formMessage =
-    document.getElementById(
-        "formMessage"
-    );
-
-
-function abrirFormulario() {
-
-    if (!submitModal) {
-
-        return;
-
-    }
-
-
-    submitModal.style.display =
-        "flex";
-
-
-    // Leaflet necesita recalcular
-    // el tamaño cuando el mapa
-    // aparece dentro del modal.
-    setTimeout(
-        function() {
-
-            if (
-                locationMap
-            ) {
-
-                locationMap.invalidateSize();
-
-            }
-
-        },
-        150
-    );
-
-}
-
-
-function cerrarFormulario() {
-
-    if (!submitModal) {
-
-        return;
-
-    }
-
-
-    submitModal.style.display =
-        "none";
-
-}
-
-
-// ==========================================
-// CERRAR AL PULSAR FUERA
-// ==========================================
-
-if (submitModal) {
-
-    submitModal.addEventListener(
-        "click",
-        function(event) {
-
-            if (
-                event.target ===
-                submitModal
-            ) {
-
-                cerrarFormulario();
-
-            }
-
-        }
-    );
-
-}
-
-
-// ==========================================
-// MAPA DEL FORMULARIO
-// ==========================================
-
-const locationMap =
-    L.map(
-        "locationMap",
-        {
-            zoomControl: true
-        }
-    );
-
-
-L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-        maxZoom: 19,
-        attribution:
-            "&copy; OpenStreetMap contributors"
-    }
-).addTo(locationMap);
-
-
-// Vista inicial
-locationMap.setView(
-    [40.2, -3.7],
-    6
-);
-
-
-// ==========================================
-// VARIABLES DE UBICACIÓN
-// ==========================================
-
-let selectedLat = null;
-let selectedLng = null;
-
-let locationMarker = null;
-
-
-// ==========================================
-// CLICK / TOQUE EN EL MAPA
-// ==========================================
-
-locationMap.on(
-    "click",
-    function(event) {
-
-        seleccionarUbicacion(
-            event.latlng.lat,
-            event.latlng.lng
-        );
-
-    }
-);
-
-
-// ==========================================
-// SELECCIONAR UBICACIÓN
-// ==========================================
-
-function seleccionarUbicacion(
-    lat,
-    lng
-) {
-
-    selectedLat = Number(lat);
-    selectedLng = Number(lng);
-
-
-    // Si ya existe marcador,
-    // simplemente lo movemos.
-    if (locationMarker) {
-
-        locationMarker.setLatLng([
-            selectedLat,
-            selectedLng
-        ]);
-
-    } else {
-
-        locationMarker =
-            L.marker(
-                [
-                    selectedLat,
-                    selectedLng
-                ],
-                {
-                    draggable: true
-                }
-            ).addTo(
-                locationMap
-            );
-
-
-        // Permitir arrastrarlo
-        locationMarker.on(
-            "dragend",
-            function(event) {
-
-                const position =
-                    event.target.getLatLng();
-
-
-                seleccionarUbicacion(
-                    position.lat,
-                    position.lng
-                );
-
-            }
-        );
-
-    }
-
-
-    // Centrar suavemente
-    // si el usuario ha seleccionado
-    // un punto.
-    locationMap.panTo(
-        [
-            selectedLat,
-            selectedLng
-        ]
-    );
-
-
-    actualizarEstadoUbicacion();
-
-}
-
-
-// ==========================================
-// TEXTO DE UBICACIÓN
-// ==========================================
-
-function actualizarEstadoUbicacion() {
-
-    const locationStatus =
-        document.getElementById(
-            "locationStatus"
-        );
-
-
-    if (!locationStatus) {
-
-        return;
-
-    }
-
-
-    if (
-        selectedLat === null ||
-        selectedLng === null
-    ) {
-
-        locationStatus.textContent =
-            "Haz clic o toca el mapa para elegirla";
-
-        return;
-
-    }
-
-
-    locationStatus.textContent =
-        "Ubicación seleccionada ✓";
-
-}
-
-
-// ==========================================
-// BOTÓN "USAR MI UBICACIÓN"
-// ==========================================
-
-const useLocationButton =
-    document.getElementById(
-        "useLocationButton"
-    );
-
-
-if (useLocationButton) {
-
-    useLocationButton.addEventListener(
-        "click",
-        obtenerUbicacion
-    );
-
-}
-
-
-function obtenerUbicacion() {
-
-    if (
-        !navigator.geolocation
-    ) {
-
-        alert(
-            "Tu navegador no permite obtener la ubicación. Puedes señalarla manualmente en el mapa."
-        );
-
-        return;
-
-    }
-
-
-    useLocationButton.disabled =
-        true;
-
-
-    useLocationButton.textContent =
-        "📍 Obteniendo ubicación...";
-
-
-    navigator.geolocation.getCurrentPosition(
-
-        function(position) {
-
-            const lat =
-                position.coords.latitude;
-
-            const lng =
-                position.coords.longitude;
-
-
-            seleccionarUbicacion(
-                lat,
-                lng
-            );
-
-
-            locationMap.setView(
-                [
-                    lat,
-                    lng
-                ],
-                16
-            );
-
-
-            useLocationButton.disabled =
-                false;
-
-
-            useLocationButton.textContent =
-                "📍 Usar mi ubicación";
-
-        },
-
-
-        function(error) {
-
-            console.error(
-                "Error de geolocalización:",
-                error
-            );
-
-
-            alert(
-                "No hemos podido obtener tu ubicación. Puedes señalarla manualmente en el mapa."
-            );
-
-
-            useLocationButton.disabled =
-                false;
-
-
-            useLocationButton.textContent =
-                "📍 Usar mi ubicación";
-
-        },
-
-
-        {
-            enableHighAccuracy: false,
-            timeout: 10000,
-            maximumAge: 60000
-        }
-
-    );
-
-}
-
-
-// ==========================================
-// ENVIAR FORMULARIO
-// ==========================================
-
-if (flagForm) {
-
-    flagForm.addEventListener(
-        "submit",
-        enviarBandera
-    );
-
-}
-
-
-async function enviarBandera(
-    event
-) {
-
-    event.preventDefault();
-
-
-    formMessage.textContent =
-        "Enviando bandera...";
-
-
-    formMessage.style.color =
-        "";
-
-
-    // ======================================
-    // DATOS DEL FORMULARIO
-    // ======================================
-
-    const municipio =
-        document
-            .getElementById(
-                "municipio"
-            )
-            .value
-            .trim();
-
-
-    const provincia =
-        document
-            .getElementById(
-                "provincia"
-            )
-            .value
-            .trim();
-
-
-    const fechaVista =
-        document
-            .getElementById(
-                "fechaVista"
-            )
-            .value;
-
-
-    const descripcion =
-        document
-            .getElementById(
-                "descripcion"
-            )
-            .value
-            .trim();
-
-
-    // ======================================
-    // COMPROBAR UBICACIÓN
-    // ======================================
-
-    if (
-        selectedLat === null ||
-        selectedLng === null
-    ) {
-
-        formMessage.textContent =
-            "❌ Primero señala aproximadamente dónde viste la bandera.";
-
-        return;
-
-    }
-
-
-    if (
-        !Number.isFinite(
-            selectedLat
-        )
-        ||
-        !Number.isFinite(
-            selectedLng
-        )
-    ) {
-
-        formMessage.textContent =
-            "❌ La ubicación seleccionada no es válida.";
-
-        return;
-
-    }
-
-
-    // ======================================
-    // COMPROBAR ESPAÑA
-    // ======================================
-
-    if (
-
-        selectedLat < 35 ||
-        selectedLat > 44 ||
-        selectedLng < -10 ||
-        selectedLng > 5
-
-    ) {
-
-        formMessage.textContent =
-            "❌ La ubicación parece estar fuera de España.";
-
-        return;
-
-    }
-
-
-    // ======================================
-    // ENVIAR A SUPABASE
-    // ======================================
-
-    try {
-
-        const { error } =
-            await supabaseClient
-                .from("banderas")
-                .insert({
-
-                    municipio:
-                        municipio,
-
-                    provincia:
-                        provincia,
-
-                    latitud:
-                        selectedLat,
-
-                    longitud:
-                        selectedLng,
-
-                    fecha_vista:
-                        fechaVista,
-
-                    descripcion:
-                        descripcion,
-
-                    estado:
-                        "revision"
-
-                });
-
-
-        if (error) {
-
-            console.error(
-                "Error Supabase:",
-                error
-            );
-
-
-            formMessage.textContent =
-                "❌ No se pudo enviar la bandera.";
-
-            return;
-
-        }
-
-
-        // ==================================
-        // ÉXITO
-        // ==================================
-
-        formMessage.textContent =
-            "✅ ¡Bandera enviada! Ahora será revisada.";
-
-
-        // Limpiar formulario
-        flagForm.reset();
-
-
-        // Limpiar ubicación
-        selectedLat = null;
-        selectedLng = null;
-
-
-        if (locationMarker) {
-
-            locationMap.removeLayer(
-                locationMarker
-            );
-
-            locationMarker = null;
-
-        }
-
-
-        actualizarEstadoUbicacion();
-
-
-        // Actualizar el mapa principal
-        await cargarBanderas();
-
-
-        // Cerrar después de un momento
-        setTimeout(
-            function() {
-
-                cerrarFormulario();
-
-                formMessage.textContent =
-                    "";
-
-            },
-            1800
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Error inesperado:",
-            error
-        );
-
-
-        formMessage.textContent =
-            "❌ Ha ocurrido un error al enviar la bandera.";
-
-    }
-
-}
-
-
-// ==========================================
-// EVITAR SCROLL ACCIDENTAL
-// EN EL MAPA DEL FORMULARIO
-// ==========================================
-
-locationMap.on(
-    "mousedown",
-    function() {
-
-        locationMap.dragging.enable();
-
-    }
-);
-
-
-// ==========================================
-// TECLA ESC PARA CERRAR MODAL
-// ==========================================
-
-document.addEventListener(
-    "keydown",
-    function(event) {
-
-        if (
-            event.key === "Escape"
-        ) {
-
-            cerrarFormulario();
-
-        }
-
-    }
-);
