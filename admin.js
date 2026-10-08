@@ -1,9 +1,8 @@
 "use strict";
 
-
-// ==================================================
-// CONFIGURACIÓN SUPABASE
-// ==================================================
+/* ==================================================
+   CONFIGURACIÓN SUPABASE
+================================================== */
 
 const SUPABASE_URL =
     "https://yljxozttfnvyjrwrvcab.supabase.co";
@@ -12,19 +11,27 @@ const SUPABASE_KEY =
     "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
 
 
-// ==================================================
-// CREAR CLIENTE
-// ==================================================
+/* ==================================================
+   CLIENTE SUPABASE
+================================================== */
 
-const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+const supabaseClient =
+    supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY,
+        {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        }
+    );
 
 
-// ==================================================
-// ELEMENTOS
-// ==================================================
+/* ==================================================
+   ELEMENTOS
+================================================== */
 
 const loginSection =
     document.getElementById("loginSection");
@@ -54,16 +61,61 @@ const pendingCount =
     document.getElementById("pendingCount");
 
 
-// ==================================================
-// ESTADO INICIAL
-// ==================================================
+/* ==================================================
+   INICIO
+================================================== */
 
-mostrarLogin();
+iniciarAdmin();
 
 
-// ==================================================
-// LOGIN
-// ==================================================
+async function iniciarAdmin() {
+
+    mostrarLogin();
+
+    const resultado =
+        await supabaseClient.auth.getSession();
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR OBTENIENDO SESIÓN:",
+            resultado.error
+        );
+
+        return;
+    }
+
+    const session =
+        resultado.data.session;
+
+
+    /*
+       Si Supabase ya tiene una sesión guardada,
+       intentamos entrar directamente al panel.
+    */
+
+    if (session) {
+
+        console.log(
+            "Sesión encontrada. Comprobando administrador..."
+        );
+
+        await comprobarAdministrador();
+
+    } else {
+
+        console.log(
+            "No hay sesión guardada."
+        );
+
+        mostrarLogin();
+    }
+}
+
+
+/* ==================================================
+   LOGIN
+================================================== */
 
 loginForm.addEventListener(
     "submit",
@@ -81,7 +133,8 @@ loginForm.addEventListener(
         if (!email || !password) {
 
             mostrarMensaje(
-                "Escribe tu correo y contraseña."
+                "Escribe tu correo y contraseña.",
+                true
             );
 
             return;
@@ -107,12 +160,10 @@ loginForm.addEventListener(
                 resultado.error
             );
 
-
             mostrarMensaje(
-                "❌ " +
-                resultado.error.message
+                "❌ " + resultado.error.message,
+                true
             );
-
 
             return;
         }
@@ -134,9 +185,9 @@ loginForm.addEventListener(
 );
 
 
-// ==================================================
-// COMPROBAR ADMINISTRADOR
-// ==================================================
+/* ==================================================
+   COMPROBAR ADMINISTRADOR
+================================================== */
 
 async function comprobarAdministrador() {
 
@@ -153,11 +204,12 @@ async function comprobarAdministrador() {
                 resultadoUsuario.error
             );
 
-
             mostrarMensaje(
-                "❌ No se pudo obtener el usuario."
+                "❌ No se pudo obtener el usuario.",
+                true
             );
 
+            mostrarLogin();
 
             return;
         }
@@ -169,10 +221,7 @@ async function comprobarAdministrador() {
 
         if (!usuario) {
 
-            mostrarMensaje(
-                "❌ No hay una sesión iniciada."
-            );
-
+            mostrarLogin();
 
             return;
         }
@@ -184,11 +233,19 @@ async function comprobarAdministrador() {
         );
 
 
+        /*
+           Comprobamos directamente la tabla
+           admin_users.
+        */
+
         const resultadoAdmin =
             await supabaseClient
                 .from("admin_users")
                 .select("user_id")
-                .eq("user_id", usuario.id)
+                .eq(
+                    "user_id",
+                    usuario.id
+                )
                 .maybeSingle();
 
 
@@ -201,9 +258,12 @@ async function comprobarAdministrador() {
 
 
             mostrarMensaje(
-                "❌ No se ha podido comprobar el administrador."
+                "❌ No se ha podido comprobar el administrador.\n\n" +
+                resultadoAdmin.error.message,
+                true
             );
 
+            mostrarLogin();
 
             return;
         }
@@ -212,19 +272,21 @@ async function comprobarAdministrador() {
         if (!resultadoAdmin.data) {
 
             mostrarMensaje(
-                "❌ Este usuario no es administrador."
+                "❌ Este usuario no es administrador.",
+                true
             );
 
 
             await supabaseClient.auth.signOut();
 
+            mostrarLogin();
 
             return;
         }
 
 
         console.log(
-            "ADMINISTRADOR CONFIRMADO"
+            "✅ ADMINISTRADOR CONFIRMADO"
         );
 
 
@@ -242,15 +304,51 @@ async function comprobarAdministrador() {
 
 
         mostrarMensaje(
-            "❌ Error inesperado."
+            "❌ Error inesperado.",
+            true
         );
+
+        mostrarLogin();
     }
 }
 
 
-// ==================================================
-// MOSTRAR LOGIN
-// ==================================================
+/* ==================================================
+   CAMBIO DE SESIÓN
+================================================== */
+
+supabaseClient.auth.onAuthStateChange(
+    async function (event, session) {
+
+        console.log(
+            "CAMBIO DE AUTENTICACIÓN:",
+            event
+        );
+
+
+        if (
+            event === "SIGNED_IN" &&
+            session
+        ) {
+
+            await comprobarAdministrador();
+
+        }
+
+
+        if (
+            event === "SIGNED_OUT"
+        ) {
+
+            mostrarLogin();
+        }
+    }
+);
+
+
+/* ==================================================
+   MOSTRAR LOGIN
+================================================== */
 
 function mostrarLogin() {
 
@@ -262,9 +360,9 @@ function mostrarLogin() {
 }
 
 
-// ==================================================
-// MOSTRAR PANEL
-// ==================================================
+/* ==================================================
+   MOSTRAR PANEL
+================================================== */
 
 function mostrarPanel() {
 
@@ -276,32 +374,65 @@ function mostrarPanel() {
 }
 
 
-// ==================================================
-// MENSAJES
-// ==================================================
+/* ==================================================
+   MENSAJES
+================================================== */
 
-function mostrarMensaje(texto) {
+function mostrarMensaje(
+    texto,
+    error = false
+) {
 
     loginMessage.textContent =
         texto;
+
+    loginMessage.classList.toggle(
+        "admin-error",
+        error
+    );
 }
 
 
-// ==================================================
-// CARGAR BANDERAS
-// ==================================================
+/* ==================================================
+   CARGAR BANDERAS
+================================================== */
 
 async function cargarPendientes() {
 
     pendingList.innerHTML =
-        "<p>⏳ Cargando banderas...</p>";
+        `
+        <div class="admin-empty">
+            <div class="icon">⏳</div>
+            <h2>Cargando banderas...</h2>
+            <p>Estamos buscando las banderas pendientes.</p>
+        </div>
+        `;
 
+
+    /*
+       IMPORTANTE:
+
+       El administrador puede ver TODAS las banderas
+       gracias a la política RLS.
+
+       Después filtramos únicamente:
+       - oculta
+       - revision
+
+       Las verificadas no aparecen como pendientes.
+    */
 
     const resultado =
         await supabaseClient
             .from("banderas")
             .select("*")
-            .eq("estado", "revision")
+            .in(
+                "estado",
+                [
+                    "oculta",
+                    "revision"
+                ]
+            )
             .order(
                 "creado_en",
                 {
@@ -318,18 +449,22 @@ async function cargarPendientes() {
         );
 
 
-        pendingList.innerHTML =
-            `<p>
-                ❌ Error cargando banderas.<br><br>
-                ${escaparHTML(
-                    resultado.error.message
-                )}
-            </p>`;
-
-
         pendingCount.textContent =
             "0";
 
+
+        pendingList.innerHTML =
+            `
+            <div class="admin-empty admin-error">
+                <div class="icon">❌</div>
+                <h2>Error cargando las banderas</h2>
+                <p>
+                    ${escaparHTML(
+                        resultado.error.message
+                    )}
+                </p>
+            </div>
+            `;
 
         return;
     }
@@ -339,6 +474,11 @@ async function cargarPendientes() {
         resultado.data || [];
 
 
+    /*
+       Contamos únicamente las que requieren
+       atención del administrador.
+    */
+
     pendingCount.textContent =
         banderas.length;
 
@@ -346,170 +486,403 @@ async function cargarPendientes() {
     if (banderas.length === 0) {
 
         pendingList.innerHTML =
-            `<p>
-                🎉 No hay banderas pendientes.
-            </p>`;
+            `
+            <div class="admin-empty">
+                <div class="icon">🎉</div>
 
+                <h2>No hay banderas pendientes</h2>
+
+                <p>
+                    No hay ninguna bandera oculta
+                    o en revisión actualmente.
+                </p>
+            </div>
+            `;
 
         return;
     }
+
+
+    /*
+       Separar por estado
+    */
+
+    const ocultas =
+        banderas.filter(
+            bandera =>
+                bandera.estado === "oculta"
+        );
+
+
+    const revision =
+        banderas.filter(
+            bandera =>
+                bandera.estado === "revision"
+        );
 
 
     pendingList.innerHTML =
         "";
 
 
-    banderas.forEach(
-        function (bandera) {
+    /*
+       SECCIÓN OCULTAS
+    */
 
-            const tarjeta =
-                document.createElement("article");
+    if (ocultas.length > 0) {
 
+        const titulo =
+            document.createElement("div");
 
-            tarjeta.className =
-                "pending-card";
+        titulo.className =
+            "admin-section-title";
 
+        titulo.innerHTML = `
+            <div>
+                <span class="admin-section-icon">
+                    🔴
+                </span>
 
-            tarjeta.innerHTML = `
-
-                <div class="pending-card-header">
-
-                    <h3>
-                        🇪🇸 Bandera #${bandera.id}
-                    </h3>
-
-                    <span class="status-review">
-                        🟡 EN REVISIÓN
-                    </span>
-
+                <div>
+                    <h2>Banderas nuevas</h2>
+                    <p>
+                        Todavía no han sido revisadas.
+                    </p>
                 </div>
+            </div>
+
+            <strong>
+                ${ocultas.length}
+            </strong>
+        `;
+
+        pendingList.appendChild(titulo);
 
 
-                <div class="pending-info">
+        ocultas.forEach(
+            function (bandera) {
 
+                pendingList.appendChild(
+                    crearTarjetaBandera(
+                        bandera
+                    )
+                );
+            }
+        );
+    }
+
+
+    /*
+       SECCIÓN EN REVISIÓN
+    */
+
+    if (revision.length > 0) {
+
+        const titulo =
+            document.createElement("div");
+
+        titulo.className =
+            "admin-section-title";
+
+        titulo.innerHTML = `
+            <div>
+                <span class="admin-section-icon">
+                    🟡
+                </span>
+
+                <div>
+                    <h2>En revisión</h2>
                     <p>
-                        📍
-                        <strong>Municipio:</strong>
-                        ${escaparHTML(
-                            bandera.municipio
-                        )}
+                        Parecen legítimas, pero todavía
+                        no están confirmadas al 100%.
                     </p>
-
-                    <p>
-                        🗺️
-                        <strong>Provincia:</strong>
-                        ${escaparHTML(
-                            bandera.provincia
-                        )}
-                    </p>
-
-                    <p>
-                        📅
-                        <strong>Vista:</strong>
-                        ${formatearFecha(
-                            bandera.fecha_vista
-                        )}
-                    </p>
-
-                    <p>
-                        📝
-                        <strong>Descripción:</strong><br>
-                        ${escaparHTML(
-                            bandera.descripcion ||
-                            "Sin descripción."
-                        )}
-                    </p>
-
                 </div>
+            </div>
+
+            <strong>
+                ${revision.length}
+            </strong>
+        `;
+
+        pendingList.appendChild(titulo);
 
 
-                <div class="pending-actions">
+        revision.forEach(
+            function (bandera) {
 
-                    <button
-                        class="location-button"
-                        onclick="
-                            verUbicacion(
-                                ${bandera.latitud},
-                                ${bandera.longitud}
-                            )
-                        "
-                    >
-                        🧭 Ver ubicación
-                    </button>
-
-
-                    <button
-                        class="verify-button"
-                        onclick="
-                            verificarBandera(
-                                ${bandera.id}
-                            )
-                        "
-                    >
-                        🟢 Verificar
-                    </button>
+                pendingList.appendChild(
+                    crearTarjetaBandera(
+                        bandera
+                    )
+                );
+            }
+        );
+    }
+}
 
 
-                    <button
-                        class="reject-button"
-                        onclick="
-                            rechazarBandera(
-                                ${bandera.id}
-                            )
-                        "
-                    >
-                        ❌ Rechazar
-                    </button>
+/* ==================================================
+   CREAR TARJETA
+================================================== */
 
-                </div>
+function crearTarjetaBandera(
+    bandera
+) {
 
+    const tarjeta =
+        document.createElement("article");
+
+
+    tarjeta.className =
+        "admin-card";
+
+
+    const esOculta =
+        bandera.estado === "oculta";
+
+
+    const estadoHTML =
+        esOculta
+
+            ? `
+                <span class="admin-status hidden">
+                    🔴 OCULTA
+                </span>
+            `
+
+            : `
+                <span class="admin-status review">
+                    🟡 EN REVISIÓN
+                </span>
             `;
 
 
-            pendingList.appendChild(
-                tarjeta
-            );
-        }
-    );
+    let botones = "";
+
+
+    if (esOculta) {
+
+        botones = `
+            <button
+                class="admin-button secondary"
+                onclick="
+                    pasarARevision(${bandera.id})
+                "
+            >
+                🟡 Pasar a revisión
+            </button>
+
+            <button
+                class="admin-button success"
+                onclick="
+                    verificarBandera(${bandera.id})
+                "
+            >
+                🟢 Verificar
+            </button>
+
+            <button
+                class="admin-button danger"
+                onclick="
+                    rechazarBandera(${bandera.id})
+                "
+            >
+                ❌ Rechazar
+            </button>
+        `;
+
+    } else {
+
+        botones = `
+            <button
+                class="admin-button success"
+                onclick="
+                    verificarBandera(${bandera.id})
+                "
+            >
+                🟢 Verificar
+            </button>
+
+            <button
+                class="admin-button danger"
+                onclick="
+                    rechazarBandera(${bandera.id})
+                "
+            >
+                ❌ Rechazar
+            </button>
+        `;
+    }
+
+
+    tarjeta.innerHTML = `
+
+        <div class="admin-info">
+
+            <div class="admin-card-header">
+
+                <h3>
+                    🇪🇸 Bandera #${bandera.id}
+                </h3>
+
+                ${estadoHTML}
+
+            </div>
+
+
+            <p>
+                📍
+                <strong>Municipio:</strong>
+                ${escaparHTML(
+                    bandera.municipio
+                )}
+            </p>
+
+
+            <p>
+                🗺️
+                <strong>Provincia:</strong>
+                ${escaparHTML(
+                    bandera.provincia
+                )}
+            </p>
+
+
+            <p>
+                📅
+                <strong>Vista:</strong>
+                ${formatearFecha(
+                    bandera.fecha_vista
+                )}
+            </p>
+
+
+            <p>
+                📝
+                <strong>Descripción:</strong><br>
+                ${escaparHTML(
+                    bandera.descripcion ||
+                    "Sin descripción."
+                )}
+            </p>
+
+
+            <p>
+                📌
+                <strong>Coordenadas:</strong>
+                ${escaparHTML(
+                    String(bandera.latitud)
+                )},
+                ${escaparHTML(
+                    String(bandera.longitud)
+                )}
+            </p>
+
+
+            <a
+                class="admin-location-link"
+                href="
+                    https://www.openstreetmap.org/
+                    ?mlat=${encodeURIComponent(
+                        bandera.latitud
+                    )}
+                    &mlon=${encodeURIComponent(
+                        bandera.longitud
+                    )}
+                    #map=18/${encodeURIComponent(
+                        bandera.latitud
+                    )}/${encodeURIComponent(
+                        bandera.longitud
+                    )}
+                "
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                🧭 Abrir ubicación en el mapa
+            </a>
+
+        </div>
+
+
+        <div class="admin-actions">
+
+            ${botones}
+
+        </div>
+
+    `;
+
+
+    return tarjeta;
 }
 
 
-// ==================================================
-// VER UBICACIÓN
-// ==================================================
+/* ==================================================
+   PASAR A REVISIÓN
+================================================== */
 
-function verUbicacion(
-    latitud,
-    longitud
+async function pasarARevision(
+    id
 ) {
-
-    const url =
-        "https://www.openstreetmap.org/" +
-        "?mlat=" + latitud +
-        "&mlon=" + longitud +
-        "#map=18/" +
-        latitud +
-        "/" +
-        longitud;
-
-
-    window.open(
-        url,
-        "_blank",
-        "noopener,noreferrer"
-    );
-}
-
-
-// ==================================================
-// VERIFICAR
-// ==================================================
-
-async function verificarBandera(id) {
 
     const confirmar =
         confirm(
-            "¿Quieres verificar esta bandera?"
+            "¿Quieres pasar esta bandera a revisión?\n\n" +
+            "Seguirá oculta del mapa público."
+        );
+
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const resultado =
+        await supabaseClient
+            .from("banderas")
+            .update({
+                estado: "revision"
+            })
+            .eq(
+                "id",
+                id
+            );
+
+
+    if (resultado.error) {
+
+        console.error(
+            "ERROR PASANDO A REVISIÓN:",
+            resultado.error
+        );
+
+
+        alert(
+            "❌ No se pudo cambiar el estado.\n\n" +
+            resultado.error.message
+        );
+
+
+        return;
+    }
+
+
+    await cargarPendientes();
+}
+
+
+/* ==================================================
+   VERIFICAR
+================================================== */
+
+async function verificarBandera(
+    id
+) {
+
+    const confirmar =
+        confirm(
+            "¿Quieres verificar esta bandera?\n\n" +
+            "Pasará a estar visible públicamente en el mapa."
         );
 
 
@@ -548,25 +921,22 @@ async function verificarBandera(id) {
     }
 
 
-    alert(
-        "🟢 Bandera verificada correctamente."
-    );
-
-
     await cargarPendientes();
 }
 
 
-// ==================================================
-// RECHAZAR
-// ==================================================
+/* ==================================================
+   RECHAZAR
+================================================== */
 
-async function rechazarBandera(id) {
+async function rechazarBandera(
+    id
+) {
 
     const confirmar =
         confirm(
             "¿Seguro que quieres rechazar esta bandera?\n\n" +
-            "Se eliminará del registro."
+            "Se eliminará permanentemente del registro."
         );
 
 
@@ -603,24 +973,35 @@ async function rechazarBandera(id) {
     }
 
 
-    alert(
-        "❌ Bandera rechazada."
-    );
-
-
     await cargarPendientes();
 }
 
 
-// ==================================================
-// CERRAR SESIÓN
-// ==================================================
+/* ==================================================
+   CERRAR SESIÓN
+================================================== */
 
 logoutButton.addEventListener(
     "click",
     async function () {
 
-        await supabaseClient.auth.signOut();
+        const resultado =
+            await supabaseClient.auth.signOut();
+
+
+        if (resultado.error) {
+
+            console.error(
+                "ERROR CERRANDO SESIÓN:",
+                resultado.error
+            );
+
+            alert(
+                "❌ No se pudo cerrar la sesión."
+            );
+
+            return;
+        }
 
 
         emailInput.value =
@@ -640,11 +1021,13 @@ logoutButton.addEventListener(
 );
 
 
-// ==================================================
-// ESCAPAR HTML
-// ==================================================
+/* ==================================================
+   ESCAPAR HTML
+================================================== */
 
-function escaparHTML(texto) {
+function escaparHTML(
+    texto
+) {
 
     return String(texto)
         .replace(
@@ -670,11 +1053,13 @@ function escaparHTML(texto) {
 }
 
 
-// ==================================================
-// FECHA
-// ==================================================
+/* ==================================================
+   FECHA
+================================================== */
 
-function formatearFecha(fecha) {
+function formatearFecha(
+    fecha
+) {
 
     if (!fecha) {
         return "Sin fecha";
