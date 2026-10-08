@@ -120,7 +120,6 @@ async function cargarBanderas() {
 
 }
 
-
 // ==========================================
 // CREAR MARCADOR
 // ==========================================
@@ -169,6 +168,74 @@ function crearMarcador(bandera) {
     }
 
 
+    // ======================================
+    // POPUP
+    // ======================================
+
+    marker.bindPopup(`
+
+        <div class="flag-popup">
+
+            <h3>
+                🇪🇸 Bandera #${bandera.id}
+            </h3>
+
+            <p>
+                📍 ${escapeHtml(
+                    bandera.municipio
+                )}
+            </p>
+
+            <p>
+                🗺️ ${escapeHtml(
+                    bandera.provincia
+                )}
+            </p>
+
+            <p>
+                📅 ${formatearFecha(
+                    bandera.fecha_vista
+                )}
+            </p>
+
+            ${estadoHTML}
+
+            <hr>
+
+            ${
+                bandera.descripcion
+                    ? `
+                        <p>
+                            ${escapeHtml(
+                                bandera.descripcion
+                            )}
+                        </p>
+                    `
+                    : ""
+            }
+
+            <button
+                onclick="
+                    findFlag(
+                        ${bandera.latitud},
+                        ${bandera.longitud}
+                    )
+                "
+            >
+                🧭 Intentar encontrarla
+            </button>
+
+        </div>
+
+    `);
+
+
+    markers.push({
+        marker: marker,
+        bandera: bandera
+    });
+
+}
     // ======================================
     // POPUP
     // ======================================
