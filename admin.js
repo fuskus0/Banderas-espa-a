@@ -1,7 +1,7 @@
 "use strict";
 
 /* ==================================================
-   CONFIGURACIÓN SUPABASE
+   SUPABASE
 ================================================== */
 
 const SUPABASE_URL =
@@ -9,11 +9,6 @@ const SUPABASE_URL =
 
 const SUPABASE_KEY =
     "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
-
-
-/* ==================================================
-   CLIENTE SUPABASE
-================================================== */
 
 const supabaseClient =
     supabase.createClient(
@@ -65,50 +60,81 @@ const pendingCount =
    INICIO
 ================================================== */
 
-iniciarAdmin();
+document.addEventListener(
+    "DOMContentLoaded",
+    iniciarAdmin
+);
 
 
 async function iniciarAdmin() {
 
+    console.log(
+        "🇪🇸 INICIANDO PANEL ADMIN"
+    );
+
+
     mostrarLogin();
 
-    const resultado =
-        await supabaseClient.auth.getSession();
 
-    if (resultado.error) {
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.auth.getSession();
+
+
+        if (error) {
+
+            console.error(
+                "ERROR GET SESSION:",
+                error
+            );
+
+            mostrarMensaje(
+                "❌ Error obteniendo la sesión.",
+                true
+            );
+
+            return;
+        }
+
+
+        console.log(
+            "SESIÓN:",
+            data.session
+        );
+
+
+        if (data.session) {
+
+            console.log(
+                "✅ SESIÓN ENCONTRADA"
+            );
+
+            await comprobarAdministrador();
+
+        } else {
+
+            console.log(
+                "ℹ️ NO HAY SESIÓN"
+            );
+
+            mostrarLogin();
+        }
+
+    } catch (error) {
 
         console.error(
-            "ERROR OBTENIENDO SESIÓN:",
-            resultado.error
+            "ERROR INICIANDO ADMIN:",
+            error
         );
 
-        return;
-    }
-
-    const session =
-        resultado.data.session;
-
-
-    /*
-       Si Supabase ya tiene una sesión guardada,
-       intentamos entrar directamente al panel.
-    */
-
-    if (session) {
-
-        console.log(
-            "Sesión encontrada. Comprobando administrador..."
+        mostrarMensaje(
+            "❌ Error iniciando el panel.",
+            true
         );
-
-        await comprobarAdministrador();
-
-    } else {
-
-        console.log(
-            "No hay sesión guardada."
-        );
-
-        mostrarLogin();
     }
 }
 
@@ -122,6 +148,7 @@ loginForm.addEventListener(
     async function (event) {
 
         event.preventDefault();
+
 
         const email =
             emailInput.value.trim();
@@ -146,22 +173,32 @@ loginForm.addEventListener(
         );
 
 
-        const resultado =
+        console.log(
+            "INTENTANDO LOGIN:",
+            email
+        );
+
+
+        const {
+            data,
+            error
+        } =
             await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
+                email,
+                password
             });
 
 
-        if (resultado.error) {
+        if (error) {
 
             console.error(
                 "ERROR LOGIN:",
-                resultado.error
+                error
             );
 
+
             mostrarMensaje(
-                "❌ " + resultado.error.message,
+                "❌ " + error.message,
                 true
             );
 
@@ -170,8 +207,8 @@ loginForm.addEventListener(
 
 
         console.log(
-            "LOGIN CORRECTO",
-            resultado.data.user
+            "✅ LOGIN CORRECTO:",
+            data.user
         );
 
 
@@ -186,40 +223,50 @@ loginForm.addEventListener(
 
 
 /* ==================================================
-   COMPROBAR ADMINISTRADOR
+   COMPROBAR ADMIN
 ================================================== */
 
 async function comprobarAdministrador() {
 
     try {
 
-        const resultadoUsuario =
-            await supabaseClient.auth.getUser();
+        mostrarMensaje(
+            "⏳ Comprobando permisos..."
+        );
 
 
-        if (resultadoUsuario.error) {
+        /*
+           Primero comprobamos que exista una sesión.
+        */
+
+        const {
+            data: sessionData,
+            error: sessionError
+        } =
+            await supabaseClient.auth.getSession();
+
+
+        if (sessionError) {
 
             console.error(
-                "ERROR OBTENIENDO USUARIO:",
-                resultadoUsuario.error
+                "ERROR SESIÓN:",
+                sessionError
             );
 
             mostrarMensaje(
-                "❌ No se pudo obtener el usuario.",
+                "❌ Error comprobando la sesión.",
                 true
             );
-
-            mostrarLogin();
 
             return;
         }
 
 
-        const usuario =
-            resultadoUsuario.data.user;
+        if (!sessionData.session) {
 
-
-        if (!usuario) {
+            console.log(
+                "❌ NO HAY SESIÓN"
+            );
 
             mostrarLogin();
 
@@ -228,48 +275,59 @@ async function comprobarAdministrador() {
 
 
         console.log(
-            "USUARIO:",
-            usuario.email
+            "USUARIO LOGUEADO:",
+            sessionData.session.user.email
         );
 
 
         /*
-           Comprobamos directamente la tabla
-           admin_users.
+           AHORA usamos nuestra función es_admin().
         */
 
-        const resultadoAdmin =
-            await supabaseClient
-                .from("admin_users")
-                .select("user_id")
-                .eq(
-                    "user_id",
-                    usuario.id
-                )
-                .maybeSingle();
+        console.log(
+            "COMPROBANDO es_admin()..."
+        );
 
 
-        if (resultadoAdmin.error) {
+        const {
+            data: esAdmin,
+            error: adminError
+        } =
+            await supabaseClient.rpc(
+                "es_admin"
+            );
+
+
+        if (adminError) {
 
             console.error(
-                "ERROR ADMIN_USERS:",
-                resultadoAdmin.error
+                "ERROR es_admin():",
+                adminError
             );
 
 
             mostrarMensaje(
-                "❌ No se ha podido comprobar el administrador.\n\n" +
-                resultadoAdmin.error.message,
+                "❌ Error comprobando el administrador: " +
+                adminError.message,
                 true
             );
-
-            mostrarLogin();
 
             return;
         }
 
 
-        if (!resultadoAdmin.data) {
+        console.log(
+            "RESULTADO es_admin():",
+            esAdmin
+        );
+
+
+        if (esAdmin !== true) {
+
+            console.log(
+                "❌ EL USUARIO NO ES ADMIN"
+            );
+
 
             mostrarMensaje(
                 "❌ Este usuario no es administrador.",
@@ -279,14 +337,12 @@ async function comprobarAdministrador() {
 
             await supabaseClient.auth.signOut();
 
-            mostrarLogin();
-
             return;
         }
 
 
         console.log(
-            "✅ ADMINISTRADOR CONFIRMADO"
+            "✅ ADMIN CONFIRMADO"
         );
 
 
@@ -298,7 +354,7 @@ async function comprobarAdministrador() {
     } catch (error) {
 
         console.error(
-            "ERROR GENERAL:",
+            "ERROR COMPROBANDO ADMIN:",
             error
         );
 
@@ -307,41 +363,29 @@ async function comprobarAdministrador() {
             "❌ Error inesperado.",
             true
         );
-
-        mostrarLogin();
     }
 }
 
 
 /* ==================================================
-   CAMBIO DE SESIÓN
+   SESIÓN
 ================================================== */
 
 supabaseClient.auth.onAuthStateChange(
-    async function (event, session) {
+    function (event, session) {
 
         console.log(
-            "CAMBIO DE AUTENTICACIÓN:",
+            "AUTH EVENT:",
             event
         );
 
 
-        if (
-            event === "SIGNED_IN" &&
-            session
-        ) {
-
-            await comprobarAdministrador();
-
-        }
-
-
-        if (
-            event === "SIGNED_OUT"
-        ) {
+        if (event === "SIGNED_OUT") {
 
             mostrarLogin();
+
         }
+
     }
 );
 
@@ -375,7 +419,7 @@ function mostrarPanel() {
 
 
 /* ==================================================
-   MENSAJES
+   MENSAJE
 ================================================== */
 
 function mostrarMensaje(
@@ -394,35 +438,30 @@ function mostrarMensaje(
 
 
 /* ==================================================
-   CARGAR BANDERAS
+   CARGAR PENDIENTES
 ================================================== */
 
 async function cargarPendientes() {
+
+    console.log(
+        "📥 CARGANDO BANDERAS..."
+    );
+
 
     pendingList.innerHTML =
         `
         <div class="admin-empty">
             <div class="icon">⏳</div>
             <h2>Cargando banderas...</h2>
-            <p>Estamos buscando las banderas pendientes.</p>
+            <p>Consultando Supabase.</p>
         </div>
         `;
 
 
-    /*
-       IMPORTANTE:
-
-       El administrador puede ver TODAS las banderas
-       gracias a la política RLS.
-
-       Después filtramos únicamente:
-       - oculta
-       - revision
-
-       Las verificadas no aparecen como pendientes.
-    */
-
-    const resultado =
+    const {
+        data,
+        error
+    } =
         await supabaseClient
             .from("banderas")
             .select("*")
@@ -441,43 +480,47 @@ async function cargarPendientes() {
             );
 
 
-    if (resultado.error) {
+    if (error) {
 
         console.error(
-            "ERROR BANDERAS:",
-            resultado.error
+            "❌ ERROR CONSULTANDO BANDERAS:",
+            error
         );
-
-
-        pendingCount.textContent =
-            "0";
 
 
         pendingList.innerHTML =
             `
             <div class="admin-empty admin-error">
                 <div class="icon">❌</div>
+
                 <h2>Error cargando las banderas</h2>
+
                 <p>
                     ${escaparHTML(
-                        resultado.error.message
+                        error.message
                     )}
                 </p>
             </div>
             `;
 
+
+        pendingCount.textContent =
+            "0";
+
+
         return;
     }
 
 
+    console.log(
+        "✅ BANDERAS RECIBIDAS:",
+        data
+    );
+
+
     const banderas =
-        resultado.data || [];
+        data || [];
 
-
-    /*
-       Contamos únicamente las que requieren
-       atención del administrador.
-    */
 
     pendingCount.textContent =
         banderas.length;
@@ -488,24 +531,26 @@ async function cargarPendientes() {
         pendingList.innerHTML =
             `
             <div class="admin-empty">
-                <div class="icon">🎉</div>
 
-                <h2>No hay banderas pendientes</h2>
+                <div class="icon">
+                    🎉
+                </div>
+
+                <h2>
+                    No hay banderas pendientes
+                </h2>
 
                 <p>
-                    No hay ninguna bandera oculta
-                    o en revisión actualmente.
+                    No hay banderas ocultas
+                    o en revisión.
                 </p>
+
             </div>
             `;
 
         return;
     }
 
-
-    /*
-       Separar por estado
-    */
 
     const ocultas =
         banderas.filter(
@@ -525,17 +570,21 @@ async function cargarPendientes() {
         "";
 
 
-    /*
-       SECCIÓN OCULTAS
-    */
+    /* ==============================================
+       OCULTAS
+    ============================================== */
 
     if (ocultas.length > 0) {
 
         const titulo =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         titulo.className =
             "admin-section-title";
+
 
         titulo.innerHTML = `
             <div>
@@ -545,6 +594,7 @@ async function cargarPendientes() {
 
                 <div>
                     <h2>Banderas nuevas</h2>
+
                     <p>
                         Todavía no han sido revisadas.
                     </p>
@@ -556,33 +606,41 @@ async function cargarPendientes() {
             </strong>
         `;
 
-        pendingList.appendChild(titulo);
+
+        pendingList.appendChild(
+            titulo
+        );
 
 
         ocultas.forEach(
-            function (bandera) {
+            bandera => {
 
                 pendingList.appendChild(
-                    crearTarjetaBandera(
+                    crearTarjeta(
                         bandera
                     )
                 );
+
             }
         );
     }
 
 
-    /*
-       SECCIÓN EN REVISIÓN
-    */
+    /* ==============================================
+       REVISION
+    ============================================== */
 
     if (revision.length > 0) {
 
         const titulo =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         titulo.className =
             "admin-section-title";
+
 
         titulo.innerHTML = `
             <div>
@@ -592,9 +650,9 @@ async function cargarPendientes() {
 
                 <div>
                     <h2>En revisión</h2>
+
                     <p>
-                        Parecen legítimas, pero todavía
-                        no están confirmadas al 100%.
+                        Pendientes de confirmación definitiva.
                     </p>
                 </div>
             </div>
@@ -604,17 +662,21 @@ async function cargarPendientes() {
             </strong>
         `;
 
-        pendingList.appendChild(titulo);
+
+        pendingList.appendChild(
+            titulo
+        );
 
 
         revision.forEach(
-            function (bandera) {
+            bandera => {
 
                 pendingList.appendChild(
-                    crearTarjetaBandera(
+                    crearTarjeta(
                         bandera
                     )
                 );
+
             }
         );
     }
@@ -625,12 +687,14 @@ async function cargarPendientes() {
    CREAR TARJETA
 ================================================== */
 
-function crearTarjetaBandera(
+function crearTarjeta(
     bandera
 ) {
 
     const tarjeta =
-        document.createElement("article");
+        document.createElement(
+            "article"
+        );
 
 
     tarjeta.className =
@@ -641,7 +705,7 @@ function crearTarjetaBandera(
         bandera.estado === "oculta";
 
 
-    const estadoHTML =
+    const estado =
         esOculta
 
             ? `
@@ -666,7 +730,9 @@ function crearTarjetaBandera(
             <button
                 class="admin-button secondary"
                 onclick="
-                    pasarARevision(${bandera.id})
+                    pasarARevision(
+                        ${bandera.id}
+                    )
                 "
             >
                 🟡 Pasar a revisión
@@ -675,7 +741,9 @@ function crearTarjetaBandera(
             <button
                 class="admin-button success"
                 onclick="
-                    verificarBandera(${bandera.id})
+                    verificarBandera(
+                        ${bandera.id}
+                    )
                 "
             >
                 🟢 Verificar
@@ -684,7 +752,9 @@ function crearTarjetaBandera(
             <button
                 class="admin-button danger"
                 onclick="
-                    rechazarBandera(${bandera.id})
+                    rechazarBandera(
+                        ${bandera.id}
+                    )
                 "
             >
                 ❌ Rechazar
@@ -697,7 +767,9 @@ function crearTarjetaBandera(
             <button
                 class="admin-button success"
                 onclick="
-                    verificarBandera(${bandera.id})
+                    verificarBandera(
+                        ${bandera.id}
+                    )
                 "
             >
                 🟢 Verificar
@@ -706,7 +778,9 @@ function crearTarjetaBandera(
             <button
                 class="admin-button danger"
                 onclick="
-                    rechazarBandera(${bandera.id})
+                    rechazarBandera(
+                        ${bandera.id}
+                    )
                 "
             >
                 ❌ Rechazar
@@ -725,10 +799,9 @@ function crearTarjetaBandera(
                     🇪🇸 Bandera #${bandera.id}
                 </h3>
 
-                ${estadoHTML}
+                ${estado}
 
             </div>
-
 
             <p>
                 📍
@@ -738,7 +811,6 @@ function crearTarjetaBandera(
                 )}
             </p>
 
-
             <p>
                 🗺️
                 <strong>Provincia:</strong>
@@ -747,7 +819,6 @@ function crearTarjetaBandera(
                 )}
             </p>
 
-
             <p>
                 📅
                 <strong>Vista:</strong>
@@ -755,7 +826,6 @@ function crearTarjetaBandera(
                     bandera.fecha_vista
                 )}
             </p>
-
 
             <p>
                 📝
@@ -766,50 +836,45 @@ function crearTarjetaBandera(
                 )}
             </p>
 
-
             <p>
                 📌
                 <strong>Coordenadas:</strong>
                 ${escaparHTML(
-                    String(bandera.latitud)
+                    String(
+                        bandera.latitud
+                    )
                 )},
                 ${escaparHTML(
-                    String(bandera.longitud)
+                    String(
+                        bandera.longitud
+                    )
                 )}
             </p>
 
-
             <a
                 class="admin-location-link"
-                href="
-                    https://www.openstreetmap.org/
-                    ?mlat=${encodeURIComponent(
-                        bandera.latitud
-                    )}
-                    &mlon=${encodeURIComponent(
-                        bandera.longitud
-                    )}
-                    #map=18/${encodeURIComponent(
-                        bandera.latitud
-                    )}/${encodeURIComponent(
-                        bandera.longitud
-                    )}
-                "
+                href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(
+                    bandera.latitud
+                )}&mlon=${encodeURIComponent(
+                    bandera.longitud
+                )}#map=18/${encodeURIComponent(
+                    bandera.latitud
+                )}/${encodeURIComponent(
+                    bandera.longitud
+                )}"
                 target="_blank"
                 rel="noopener noreferrer"
             >
-                🧭 Abrir ubicación en el mapa
+                🧭 Abrir ubicación
             </a>
 
         </div>
-
 
         <div class="admin-actions">
 
             ${botones}
 
         </div>
-
     `;
 
 
@@ -825,19 +890,19 @@ async function pasarARevision(
     id
 ) {
 
-    const confirmar =
-        confirm(
-            "¿Quieres pasar esta bandera a revisión?\n\n" +
+    if (
+        !confirm(
+            "¿Pasar esta bandera a revisión?\n\n" +
             "Seguirá oculta del mapa público."
-        );
-
-
-    if (!confirmar) {
+        )
+    ) {
         return;
     }
 
 
-    const resultado =
+    const {
+        error
+    } =
         await supabaseClient
             .from("banderas")
             .update({
@@ -849,17 +914,17 @@ async function pasarARevision(
             );
 
 
-    if (resultado.error) {
+    if (error) {
 
         console.error(
             "ERROR PASANDO A REVISIÓN:",
-            resultado.error
+            error
         );
 
 
         alert(
             "❌ No se pudo cambiar el estado.\n\n" +
-            resultado.error.message
+            error.message
         );
 
 
@@ -879,19 +944,19 @@ async function verificarBandera(
     id
 ) {
 
-    const confirmar =
-        confirm(
-            "¿Quieres verificar esta bandera?\n\n" +
-            "Pasará a estar visible públicamente en el mapa."
-        );
-
-
-    if (!confirmar) {
+    if (
+        !confirm(
+            "¿Verificar esta bandera?\n\n" +
+            "Será visible en el mapa público."
+        )
+    ) {
         return;
     }
 
 
-    const resultado =
+    const {
+        error
+    } =
         await supabaseClient
             .from("banderas")
             .update({
@@ -903,17 +968,17 @@ async function verificarBandera(
             );
 
 
-    if (resultado.error) {
+    if (error) {
 
         console.error(
             "ERROR VERIFICANDO:",
-            resultado.error
+            error
         );
 
 
         alert(
             "❌ No se pudo verificar.\n\n" +
-            resultado.error.message
+            error.message
         );
 
 
@@ -933,19 +998,19 @@ async function rechazarBandera(
     id
 ) {
 
-    const confirmar =
-        confirm(
-            "¿Seguro que quieres rechazar esta bandera?\n\n" +
-            "Se eliminará permanentemente del registro."
-        );
-
-
-    if (!confirmar) {
+    if (
+        !confirm(
+            "¿Rechazar esta bandera?\n\n" +
+            "Se eliminará del registro."
+        )
+    ) {
         return;
     }
 
 
-    const resultado =
+    const {
+        error
+    } =
         await supabaseClient
             .from("banderas")
             .delete()
@@ -955,17 +1020,17 @@ async function rechazarBandera(
             );
 
 
-    if (resultado.error) {
+    if (error) {
 
         console.error(
             "ERROR RECHAZANDO:",
-            resultado.error
+            error
         );
 
 
         alert(
             "❌ No se pudo rechazar.\n\n" +
-            resultado.error.message
+            error.message
         );
 
 
@@ -985,24 +1050,7 @@ logoutButton.addEventListener(
     "click",
     async function () {
 
-        const resultado =
-            await supabaseClient.auth.signOut();
-
-
-        if (resultado.error) {
-
-            console.error(
-                "ERROR CERRANDO SESIÓN:",
-                resultado.error
-            );
-
-            alert(
-                "❌ No se pudo cerrar la sesión."
-            );
-
-            return;
-        }
-
+        await supabaseClient.auth.signOut();
 
         emailInput.value =
             "";
@@ -1010,11 +1058,9 @@ logoutButton.addEventListener(
         passwordInput.value =
             "";
 
-
         mostrarMensaje(
             ""
         );
-
 
         mostrarLogin();
     }
