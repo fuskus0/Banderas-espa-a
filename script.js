@@ -1,3 +1,4 @@
+```javascript
 // ==========================================
 // CONFIGURACIÓN SUPABASE
 // ==========================================
@@ -49,7 +50,14 @@ let todasLasBanderas = [];
 
 
 // ==========================================
-// CARGAR SOLO BANDERAS VERIFICADAS
+// CARGAR BANDERAS PÚBLICAS
+// ==========================================
+// Se muestran:
+// 🟡 revision
+// 🟢 verificada
+//
+// NO se muestran:
+// 🔴 oculta
 // ==========================================
 
 async function cargarBanderas() {
@@ -60,7 +68,13 @@ async function cargarBanderas() {
             await supabaseClient
                 .from("banderas")
                 .select("*")
-                .eq("estado", "verificada")
+                .in(
+                    "estado",
+                    [
+                        "revision",
+                        "verificada"
+                    ]
+                )
                 .order("creado_en", {
                     ascending: false
                 });
@@ -123,6 +137,45 @@ function crearMarcador(bandera) {
         ]).addTo(map);
 
 
+    // ======================================
+    // ESTADO DE LA BANDERA
+    // ======================================
+
+    let estadoHTML = "";
+
+
+    if (
+        bandera.estado === "revision"
+    ) {
+
+        estadoHTML = `
+            <p class="flag-status-review">
+                🟡 EN REVISIÓN
+            </p>
+
+            <p class="flag-review-info">
+                Esta bandera ha sido registrada,
+                pero todavía no ha sido confirmada.
+            </p>
+        `;
+
+    } else if (
+        bandera.estado === "verificada"
+    ) {
+
+        estadoHTML = `
+            <p class="flag-status-verified">
+                🟢 VERIFICADA
+            </p>
+        `;
+
+    }
+
+
+    // ======================================
+    // POPUP
+    // ======================================
+
     marker.bindPopup(`
 
         <div class="flag-popup">
@@ -149,9 +202,7 @@ function crearMarcador(bandera) {
                 )}
             </p>
 
-            <p>
-                🟢 VERIFICADA
-            </p>
+            ${estadoHTML}
 
             <hr>
 
@@ -894,8 +945,8 @@ async function enviarBandera(
                     descripcion:
                         descripcion,
 
-                    // NUEVO SISTEMA:
-                    // Toda bandera nueva empieza oculta.
+                    // Toda bandera nueva
+                    // empieza oculta.
                     estado:
                         "oculta"
 
@@ -950,8 +1001,8 @@ async function enviarBandera(
 
 
         // Actualizar el mapa principal.
-        // La nueva bandera es "oculta",
-        // así que no aparecerá hasta estar verificada.
+        // Como la nueva bandera es "oculta",
+        // no aparecerá todavía.
         await cargarBanderas();
 
 
@@ -1018,3 +1069,4 @@ document.addEventListener(
 
     }
 );
+```
