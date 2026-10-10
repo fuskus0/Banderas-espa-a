@@ -330,8 +330,21 @@ function normalizarRutaFoto(valor) {
                 return null;
             }
 
-            const prefijo =
-                `/storage/v1/object/${"sign"}/`;
+            
+const prefijosValidos = [
+    "/storage/v1/object/sign/",
+    "/storage/v1/object/public/",
+    "/storage/v1/object/"
+];
+
+const prefijo = prefijosValidos.find((p) =>
+    url.pathname.startsWith(p)
+);
+
+if (!prefijo) return null;
+
+ruta = url.pathname.slice(prefijo.length);
+
 
             const prefijosValidos = [
                 "/storage/v1/object/sign/",
