@@ -1,6 +1,6 @@
 
 const SUPABASE_URL = "https://yljxozttfnvyjrwrvcab.supabase.co";
-const SUPABASE_KEY = "PEGA_AQUI_TU_CLAVE_PUBLICABLE_DE_SUPABASE";
+const SUPABASE_KEY = "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
 
 const BUCKET_ORIGINAL = "banderas-fotos";
 const DURACION_URL_FOTO = 600;
@@ -330,21 +330,8 @@ function normalizarRutaFoto(valor) {
                 return null;
             }
 
-            
-const prefijosValidos = [
-    "/storage/v1/object/sign/",
-    "/storage/v1/object/public/",
-    "/storage/v1/object/"
-];
-
-const prefijo = prefijosValidos.find((p) =>
-    url.pathname.startsWith(p)
-);
-
-if (!prefijo) return null;
-
-ruta = url.pathname.slice(prefijo.length);
-
+            const prefijo =
+                `/storage/v1/object/${"sign"}/`;
 
             const prefijosValidos = [
                 "/storage/v1/object/sign/",
