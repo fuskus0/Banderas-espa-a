@@ -317,6 +317,7 @@ async function crearTarjeta(bandera) {
     return tarjeta;
 }
 
+
 function normalizarRutaFoto(valor) {
     if (!valor || typeof valor !== "string") return null;
 
@@ -329,9 +330,6 @@ function normalizarRutaFoto(valor) {
             if (url.origin !== new URL(SUPABASE_URL).origin) {
                 return null;
             }
-
-            const prefijo =
-                `/storage/v1/object/${"sign"}/`;
 
             const prefijosValidos = [
                 "/storage/v1/object/sign/",
@@ -376,9 +374,7 @@ function normalizarRutaFoto(valor) {
     }
 }
 
-async function obtenerFotoOriginal(fotoUrl) {
     const ruta = normalizarRutaFoto(fotoUrl);
-
     if (!ruta) return null;
 
     try {
