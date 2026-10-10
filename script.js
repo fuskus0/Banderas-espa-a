@@ -107,18 +107,58 @@ async function cargarBanderas() {
    IMPORTANTE: esta función solo aparece una vez.
 ========================================== */
 
+
 function crearMarcador(bandera) {
     const lat = Number(bandera.latitud);
     const lng = Number(bandera.longitud);
 
-    // Evitar coordenadas inválidas.
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        console.warn(
-            "Bandera con coordenadas inválidas:",
-            bandera.id
-        );
+        console.warn("Coordenadas inválidas:", bandera.id);
         return;
     }
+
+    const marker = L.marker([lat, lng]).addTo(map);
+    let estadoHTML = "";
+
+    if (bandera.estado === "revision") {
+        estadoHTML = `
+            <p class="flag-status-review">
+                🟡 EN REVISIÓN
+            </p>
+            <p class="flag-review-info">
+                Esta bandera ha sido registrada,
+                pero todavía no ha sido confirmada.
+            </p>
+        `;
+    } else if (bandera.estado === "verificada") {
+        estadoHTML = `
+            <p class="flag-status-verified">
+                🟢 VERIFICADA
+            </p>
+        `;
+    }
+
+    const descripcionHTML = bandera.descripcion
+        ? `<p>${escapeHtml(bandera.descripcion)}</p>`
+        : "";
+
+    marker.bindPopup(`
+        <div class="flag-popup">
+            <h3>🇪🇸 Bandera #${escapeHtml(bandera.id)}</h3>
+            <p>📍 ${escapeHtml(bandera.municipio)}</p>
+            <p>🗺️ ${escapeHtml(bandera.provincia)}</p>
+            <p>📅 ${formatearFecha(bandera.fecha_vista)}</p>
+            ${estadoHTML}
+            <hr>
+            ${descripcionHTML}
+            <button type="button" onclick="findFlag(${lat}, ${lng})">
+                🧭 Intentar encontrarla
+            </button>
+        </div>
+    `);
+
+    markers.push({ marker, bandera });
+}
 
     const marker = L.marker([lat, lng]).addTo(map);
 
