@@ -1,19 +1,27 @@
 
+"use strict";
+
 /* ==========================================
    CONFIGURACIÓN SUPABASE
 ========================================== */
 
-const SUPABASE_URL = "https://yljxozttfnvyjrwrvcab.supabase.co";
-const SUPABASE_KEY = "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
+const SUPABASE_URL =
+    "https://yljxozttfnvyjrwrvcab.supabase.co";
+
+const SUPABASE_KEY =
+    "sb_publishable_V73MAvXSKRKH6cZh_AfDxQ__0rXOxKE";
 
 if (!window.supabase) {
-    throw new Error("No se ha cargado la librería de Supabase.");
+    throw new Error("No se ha cargado Supabase.");
 }
 
 const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
+
+const BUCKET_PUBLICO = "banderas-fotos-publicas";
+const MAX_FOTO_BYTES = 8 * 1024 * 1024;
 
 
 /* ==========================================
@@ -24,17 +32,15 @@ const map = L.map("map", {
     zoomControl: true
 });
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors"
-}).addTo(map);
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
 
 map.setView([40.2, -3.7], 6);
-
-
-/* ==========================================
-   VARIABLES
-========================================== */
 
 const markers = [];
 let todasLasBanderas = [];
@@ -42,15 +48,10 @@ let todasLasBanderas = [];
 
 /* ==========================================
    CARGAR BANDERAS PÚBLICAS
-   revision   = visible, pendiente de confirmar
-   verificada = visible, confirmada
-   oculta     = no visible públicamente
 ========================================== */
 
 async function cargarBanderas() {
     try {
-        console.log("Cargando banderas públicas...");
-
         const { data, error } = await supabaseClient
             .from("banderas")
             .select("*")
@@ -58,20 +59,11 @@ async function cargarBanderas() {
             .order("creado_en", { ascending: false });
 
         if (error) {
-            console.error("Error cargando las banderas:", error);
+            console.error("Error cargando banderas:", error);
             return;
         }
 
         todasLasBanderas = data || [];
-
-        console.log("Banderas públicas recibidas:", todasLasBanderas.length);
-        console.log(
-            "Estados recibidos:",
-            todasLasBanderas.map(b => ({
-                id: b.id,
-                estado: b.estado
-            }))
-        );
 
         markers.forEach(item => map.removeLayer(item.marker));
         markers.length = 0;
@@ -79,14 +71,30 @@ async function cargarBanderas() {
         todasLasBanderas.forEach(crearMarcador);
 
     } catch (error) {
-        console.error("Error inesperado al cargar banderas:", error);
+        console.error("Error inesperado:", error);
     }
 }
 
 
 /* ==========================================
+   FOTOGRAFÍA PÚBLICA
+========================================== */
+
+function obtenerUrlPublica(bandera) {
+    if (!bandera.foto_publica_path) {
+        return null;
+    }
+
+    const { data } = supabaseClient.storage
+        .from(BUCKET_PUBLICO)
+        .getPublicUrl(bandera.foto_publica_path);
+
+    return data?.publicUrl || null;
+}
+
+
+/* ==========================================
    CREAR MARCADOR
-   Esta función debe existir una sola vez.
 ========================================== */
 
 function crearMarcador(bandera) {
@@ -94,26 +102,49 @@ function crearMarcador(bandera) {
     const lng = Number(bandera.longitud);
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        console.warn("Coordenadas inválidas:", bandera.id);
         return;
     }
 
     const marker = L.marker([lat, lng]).addTo(map);
-    let estadoHTML = "";
 
-    if (bandera.estado === "revision") {
-        estadoHTML = `
+    const verificada = bandera.estado === "verificada";
+    const urlFoto = obtenerUrlPublica(bandera);
+
+    const estadoHTML = verificada
+        ? `<p class="flag-status-verified">🟢 VERIFICADA</p>`
+        : `
             <p class="flag-status-review">🟡 EN REVISIÓN</p>
             <p class="flag-review-info">
-                Esta bandera ha sido registrada,
-                pero todavía no ha sido confirmada.
+                Esta bandera todavía no ha sido confirmada.
             </p>
         `;
-    } else if (bandera.estado === "verificada") {
-        estadoHTML = `
-            <p class="flag-status-verified">🟢 VERIFICADA</p>
+
+    const fotoHTML = urlFoto
+        ? `
+            <div class="flag-photo-container">
+                <img
+                    class="flag-photo ${verificada ? "" : "flag-photo-blurred"}"
+                    src="${escapeHtml(urlFoto)}"
+                    alt="${verificada
+                        ? "Fotografía de la bandera verificada"
+                        : "Fotografía borrosa de una bandera en revisión"}"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                >
+                ${
+                    verificada
+                        ? ""
+                        : `<p class="flag-review-info">
+                            Imagen borrosa hasta su verificación.
+                           </p>`
+                }
+            </div>
+        `
+        : `
+            <p class="flag-review-info">
+                📷 No hay fotografía pública disponible.
+            </p>
         `;
-    }
 
     const descripcionHTML = bandera.descripcion
         ? `<p>${escapeHtml(bandera.descripcion)}</p>`
@@ -122,13 +153,22 @@ function crearMarcador(bandera) {
     marker.bindPopup(`
         <div class="flag-popup">
             <h3>🇪🇸 Bandera #${escapeHtml(bandera.id)}</h3>
+
             <p>📍 ${escapeHtml(bandera.municipio)}</p>
             <p>🗺️ ${escapeHtml(bandera.provincia)}</p>
             <p>📅 ${formatearFecha(bandera.fecha_vista)}</p>
+
             ${estadoHTML}
+            ${fotoHTML}
+
             <hr>
+
             ${descripcionHTML}
-            <button type="button" onclick="findFlag(${lat}, ${lng})">
+
+            <button
+                type="button"
+                onclick="findFlag(${lat}, ${lng})"
+            >
                 🧭 Intentar encontrarla
             </button>
         </div>
@@ -139,7 +179,7 @@ function crearMarcador(bandera) {
 
 
 /* ==========================================
-   ESCAPAR TEXTO
+   ESCAPAR HTML
 ========================================== */
 
 function escapeHtml(value) {
@@ -154,7 +194,7 @@ function escapeHtml(value) {
 
 
 /* ==========================================
-   FORMATEAR FECHA
+   FECHAS
 ========================================== */
 
 function formatearFecha(fecha) {
@@ -203,7 +243,8 @@ if (searchInput) {
             const provincia =
                 String(item.bandera.provincia || "").toLowerCase();
 
-            return municipio.includes(texto) || provincia.includes(texto);
+            return municipio.includes(texto) ||
+                provincia.includes(texto);
         });
 
         if (resultados.length === 0) return;
@@ -235,9 +276,7 @@ function abrirFormulario() {
     submitModal.setAttribute("aria-hidden", "false");
 
     setTimeout(() => {
-        if (locationMap) {
-            locationMap.invalidateSize();
-        }
+        if (locationMap) locationMap.invalidateSize();
     }, 150);
 }
 
@@ -252,7 +291,7 @@ window.abrirFormulario = abrirFormulario;
 window.cerrarFormulario = cerrarFormulario;
 
 if (submitModal) {
-    submitModal.addEventListener("click", function (event) {
+    submitModal.addEventListener("click", event => {
         if (event.target === submitModal) {
             cerrarFormulario();
         }
@@ -268,23 +307,21 @@ const locationMap = L.map("locationMap", {
     zoomControl: true
 });
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors"
-}).addTo(locationMap);
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+    }
+).addTo(locationMap);
 
 locationMap.setView([40.2, -3.7], 6);
-
-
-/* ==========================================
-   SELECCIÓN DE UBICACIÓN
-========================================== */
 
 let selectedLat = null;
 let selectedLng = null;
 let locationMarker = null;
 
-locationMap.on("click", function (event) {
+locationMap.on("click", event => {
     seleccionarUbicacion(event.latlng.lat, event.latlng.lng);
 });
 
@@ -300,9 +337,8 @@ function seleccionarUbicacion(lat, lng) {
             { draggable: true }
         ).addTo(locationMap);
 
-        locationMarker.on("dragend", function (event) {
+        locationMarker.on("dragend", event => {
             const position = event.target.getLatLng();
-
             seleccionarUbicacion(position.lat, position.lng);
         });
     }
@@ -311,19 +347,19 @@ function seleccionarUbicacion(lat, lng) {
 }
 
 function actualizarEstadoUbicacion() {
-    const locationStatus = document.getElementById("locationStatus");
+    const status = document.getElementById("locationStatus");
 
-    if (!locationStatus) return;
+    if (!status) return;
 
-    locationStatus.textContent =
-        selectedLat === null || selectedLng === null
+    status.textContent =
+        selectedLat === null
             ? "Haz clic o toca el mapa para elegirla"
             : "Ubicación seleccionada ✓";
 }
 
 
 /* ==========================================
-   USAR MI UBICACIÓN
+   GEOLOCALIZACIÓN
 ========================================== */
 
 const useLocationButton =
@@ -335,37 +371,31 @@ if (useLocationButton) {
 
 function obtenerUbicacion() {
     if (!navigator.geolocation) {
-        alert("No se puede obtener la ubicación. Selecciónala manualmente en el mapa.");
+        alert("Selecciona la ubicación manualmente en el mapa.");
         return;
     }
 
-    if (useLocationButton) {
-        useLocationButton.disabled = true;
-        useLocationButton.textContent = "📍 Obteniendo ubicación...";
-    }
+    useLocationButton.disabled = true;
+    useLocationButton.textContent = "📍 Obteniendo ubicación...";
 
     navigator.geolocation.getCurrentPosition(
-        function (position) {
+        position => {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
 
             seleccionarUbicacion(lat, lng);
             locationMap.setView([lat, lng], 16);
 
-            if (useLocationButton) {
-                useLocationButton.disabled = false;
-                useLocationButton.textContent = "📍 Usar mi ubicación";
-            }
+            useLocationButton.disabled = false;
+            useLocationButton.textContent = "📍 Usar mi ubicación";
         },
-        function (error) {
+        error => {
             console.error("Error de geolocalización:", error);
 
-            alert("No se ha podido obtener tu ubicación. Puedes marcarla manualmente.");
+            alert("No se ha podido obtener la ubicación. Puedes marcarla manualmente.");
 
-            if (useLocationButton) {
-                useLocationButton.disabled = false;
-                useLocationButton.textContent = "📍 Usar mi ubicación";
-            }
+            useLocationButton.disabled = false;
+            useLocationButton.textContent = "📍 Usar mi ubicación";
         },
         {
             enableHighAccuracy: false,
@@ -377,7 +407,7 @@ function obtenerUbicacion() {
 
 
 /* ==========================================
-   ENVIAR FORMULARIO
+   ENVIAR BANDERA Y FOTO PRIVADA
 ========================================== */
 
 if (flagForm) {
@@ -388,8 +418,6 @@ async function enviarBandera(event) {
     event.preventDefault();
 
     if (!formMessage) return;
-
-    formMessage.textContent = "Enviando bandera...";
 
     const municipio =
         document.getElementById("municipio").value.trim();
@@ -403,9 +431,36 @@ async function enviarBandera(event) {
     const descripcion =
         document.getElementById("descripcion").value.trim();
 
+    const fotoInput = document.getElementById("foto");
+    const foto = fotoInput?.files?.[0];
+
     if (!municipio || !provincia || !fechaVista) {
         formMessage.textContent =
             "❌ Completa el municipio, la provincia y la fecha.";
+        return;
+    }
+
+    if (!foto) {
+        formMessage.textContent =
+            "❌ Selecciona una fotografía.";
+        return;
+    }
+
+    const tiposPermitidos = [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ];
+
+    if (!tiposPermitidos.includes(foto.type)) {
+        formMessage.textContent =
+            "❌ Usa una imagen JPG, PNG o WebP.";
+        return;
+    }
+
+    if (foto.size > MAX_FOTO_BYTES) {
+        formMessage.textContent =
+            "❌ La imagen supera el límite de 8 MB.";
         return;
     }
 
@@ -428,8 +483,42 @@ async function enviarBandera(event) {
         return;
     }
 
+    const submitButton = flagForm.querySelector(
+        'button[type="submit"]'
+    );
+
+    if (submitButton) submitButton.disabled = true;
+
+    let rutaFoto = null;
+    let registroCreado = false;
+
     try {
-        const { error } = await supabaseClient
+        formMessage.textContent = "📤 Subiendo fotografía privada...";
+
+        const extension = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp"
+        }[foto.type];
+
+        const nombreUnico =
+            `banderas/${crypto.randomUUID()}.${extension}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from("banderas-fotos")
+            .upload(nombreUnico, foto, {
+                contentType: foto.type,
+                cacheControl: "3600",
+                upsert: false
+            });
+
+        if (uploadError) throw uploadError;
+
+        rutaFoto = nombreUnico;
+
+        formMessage.textContent = "📝 Guardando registro...";
+
+        const { error: insertError } = await supabaseClient
             .from("banderas")
             .insert({
                 municipio,
@@ -438,18 +527,16 @@ async function enviarBandera(event) {
                 longitud: selectedLng,
                 fecha_vista: fechaVista,
                 descripcion,
-                estado: "oculta"
+                estado: "oculta",
+                foto_url: rutaFoto
             });
 
-        if (error) {
-            console.error("Error Supabase:", error);
-            formMessage.textContent =
-                "❌ No se pudo enviar la bandera: " + error.message;
-            return;
-        }
+        if (insertError) throw insertError;
+
+        registroCreado = true;
 
         formMessage.textContent =
-            "✅ ¡Bandera enviada! Un administrador revisará el registro.";
+            "✅ Bandera enviada. Un administrador revisará la foto.";
 
         flagForm.reset();
 
@@ -462,37 +549,50 @@ async function enviarBandera(event) {
         }
 
         actualizarEstadoUbicacion();
-
-        // Los registros ocultos no aparecen en el mapa público.
         await cargarBanderas();
 
         setTimeout(() => {
             cerrarFormulario();
             formMessage.textContent = "";
-        }, 1800);
+        }, 2200);
 
     } catch (error) {
-        console.error("Error inesperado al enviar:", error);
+        console.error("Error al enviar bandera:", error);
+
+        /*
+         * Si falla la inserción, intentamos eliminar el archivo
+         * que acabamos de subir para no dejarlo abandonado.
+         */
+        if (rutaFoto && !registroCreado) {
+            const { error: cleanupError } = await supabaseClient.storage
+                .from("banderas-fotos")
+                .remove([rutaFoto]);
+
+            if (cleanupError) {
+                console.error(
+                    "No se pudo limpiar la foto:",
+                    cleanupError
+                );
+            }
+        }
+
         formMessage.textContent =
-            "❌ Ha ocurrido un error al enviar la bandera.";
+            "❌ No se pudo enviar: " +
+            (error.message || "error inesperado.");
+
+    } finally {
+        if (submitButton) submitButton.disabled = false;
     }
 }
 
 
 /* ==========================================
-   CERRAR CON ESCAPE
+   ESCAPE E INICIO
 ========================================== */
 
-document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") {
-        cerrarFormulario();
-    }
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") cerrarFormulario();
 });
-
-
-/* ==========================================
-   INICIAR
-========================================== */
 
 actualizarEstadoUbicacion();
 cargarBanderas();
