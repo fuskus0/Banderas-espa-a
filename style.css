@@ -1534,3 +1534,29 @@ footer {
     }
 
 }
+
+
+.flag-photo-container {
+    margin: 12px 0;
+    overflow: hidden;
+}
+
+.flag-photo {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    max-height: 240px;
+    object-fit: contain;
+    margin: 0 auto;
+    border-radius: 10px;
+}
+
+.flag-photo-blurred {
+    filter: blur(18px);
+}
+
+#foto {
+    display: block;
+    width: 100%;
+    margin: 8px 0 12px;
+}
