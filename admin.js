@@ -710,79 +710,42 @@ async function crearTarjeta(bandera) {
    11. CREAR IMAGEN BORROSA O NÍTIDA
 ========================================================= */
 
-async function procesarFotografia(blobOriginal, borrosa) {
-    let imagen;
+async function pixelarImagen(blob, pixelSize = 10) {
+  const imagen = await createImageBitmap(blob);
 
-    if ("createImageBitmap" in window) {
-        imagen = await createImageBitmap(blobOriginal);
-    } else {
-        throw new Error(
-            "Este navegador no permite procesar la imagen."
-        );
-    }
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
-    const escala = Math.min(
-        1,
-        1800 / Math.max(imagen.width, imagen.height)
+  const ancho = imagen.width;
+  const alto = imagen.height;
+
+  canvas.width = ancho;
+  canvas.height = alto;
+
+  const pequeno = document.createElement("canvas");
+  const ctxPequeno = pequeno.getContext("2d");
+
+  pequeno.width = Math.max(1, Math.ceil(ancho / pixelSize));
+  pequeno.height = Math.max(1, Math.ceil(alto / pixelSize));
+
+  ctxPequeno.drawImage(imagen, 0, 0, pequeno.width, pequeno.height);
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(
+    pequeno,
+    0, 0, pequeno.width, pequeno.height,
+    0, 0, ancho, alto
+  );
+
+  imagen.close();
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      blob => blob ? resolve(blob) : reject(new Error("No se pudo pixelar la imagen")),
+      "image/jpeg",
+      0.9
     );
-
-    const canvas = document.createElement("canvas");
-
-    canvas.width = Math.max(
-        1,
-        Math.round(imagen.width * escala)
-    );
-
-    canvas.height = Math.max(
-        1,
-        Math.round(imagen.height * escala)
-    );
-
-    const contexto = canvas.getContext("2d");
-
-    if (!contexto) {
-        imagen.close();
-        throw new Error("No se pudo preparar el lienzo de imagen.");
-    }
-
-    contexto.fillStyle = "#ffffff";
-
-    contexto.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    // El desenfoque se aplica a los píxeles antes de subir la foto.
-    contexto.filter = borrosa ? "blur(16px)" : "none";
-
-    contexto.drawImage(
-        imagen,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    imagen.close();
-
-    return await new Promise((resolve, reject) => {
-        canvas.toBlob(
-            resultado => {
-                if (!resultado) {
-                    reject(
-                        new Error("No se pudo generar la fotografía.")
-                    );
-                    return;
-                }
-
-                resolve(resultado);
-            },
-            "image/jpeg",
-            0.88
-        );
-    });
+  });
 }
 
 
