@@ -52,11 +52,8 @@ let todasLasBanderas = [];
 
 async function cargarBanderas() {
     try {
-        const { data, error } = await supabaseClient
-            .from("banderas")
-            .select("*")
-            .in("estado", ["revision", "verificada"])
-            .order("creado_en", { ascending: false });
+        // Esta RPC solo devuelve coordenadas aproximadas; nunca latitud/longitud exactas.
+        const { data, error } = await supabaseClient.rpc("listar_banderas_publicas");
 
         if (error) {
             console.error("Error cargando banderas:", error);
@@ -105,7 +102,14 @@ function crearMarcador(bandera) {
         return;
     }
 
-    const marker = L.marker([lat, lng]).addTo(map);
+    // Círculo de búsqueda de 100 m alrededor del centro aproximado.
+    const marker = L.circle([lat, lng], {
+        radius: 100,
+        color: bandera.estado === "verificada" ? "#16803c" : "#c58b00",
+        fillColor: bandera.estado === "verificada" ? "#22c55e" : "#facc15",
+        fillOpacity: 0.18,
+        weight: 2
+    }).addTo(map);
 
     const verificada = bandera.estado === "verificada";
     const urlFoto = obtenerUrlPublica(bandera);
@@ -165,12 +169,7 @@ function crearMarcador(bandera) {
 
             ${descripcionHTML}
 
-            <button
-                type="button"
-                onclick="findFlag(${lat}, ${lng})"
-            >
-                🧭 Intentar encontrarla
-            </button>
+            <p class="flag-review-info">🧭 Círculo de búsqueda aproximado de 100 metros. La ubicación exacta no se muestra.</p>
         </div>
     `);
 
@@ -211,17 +210,9 @@ function formatearFecha(fecha) {
 
 
 /* ==========================================
-   NAVEGAR HASTA UNA BANDERA
+   PRIVACIDAD DE UBICACIÓN
+   No se ofrece navegación a coordenadas exactas desde el mapa público.
 ========================================== */
-
-function findFlag(lat, lng) {
-    const url =
-        `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-
-    window.open(url, "_blank", "noopener");
-}
-
-window.findFlag = findFlag;
 
 
 /* ==========================================
@@ -518,18 +509,15 @@ async function enviarBandera(event) {
 
         formMessage.textContent = "📝 Guardando registro...";
 
-        const { error: insertError } = await supabaseClient
-            .from("banderas")
-            .insert({
-                municipio,
-                provincia,
-                latitud: selectedLat,
-                longitud: selectedLng,
-                fecha_vista: fechaVista,
-                descripcion,
-                estado: "oculta",
-                foto_url: rutaFoto
-            });
+        const { error: insertError } = await supabaseClient.rpc("enviar_bandera_segura", {
+            p_municipio: municipio,
+            p_provincia: provincia,
+            p_latitud: selectedLat,
+            p_longitud: selectedLng,
+            p_fecha_vista: fechaVista,
+            p_descripcion: descripcion || null,
+            p_foto_url: rutaFoto
+        });
 
         if (insertError) throw insertError;
 
