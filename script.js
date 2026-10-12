@@ -20,7 +20,6 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_KEY
 );
 
-const BUCKET_PUBLICO = "banderas-fotos-publicas";
 const MAX_FOTO_BYTES = 8 * 1024 * 1024;
 
 
@@ -74,23 +73,6 @@ async function cargarBanderas() {
 
 
 /* ==========================================
-   FOTOGRAFÍA PÚBLICA
-========================================== */
-
-function obtenerUrlPublica(bandera) {
-    if (!bandera.foto_publica_path) {
-        return null;
-    }
-
-    const { data } = supabaseClient.storage
-        .from(BUCKET_PUBLICO)
-        .getPublicUrl(bandera.foto_publica_path);
-
-    return data?.publicUrl || null;
-}
-
-
-/* ==========================================
    CREAR MARCADOR
 ========================================== */
 
@@ -102,17 +84,11 @@ function crearMarcador(bandera) {
         return;
     }
 
-    // Círculo de búsqueda de 100 m alrededor del centro aproximado.
-    const marker = L.circle([lat, lng], {
-        radius: 100,
-        color: bandera.estado === "verificada" ? "#16803c" : "#c58b00",
-        fillColor: bandera.estado === "verificada" ? "#22c55e" : "#facc15",
-        fillOpacity: 0.18,
-        weight: 2
-    }).addTo(map);
+    // Se muestra un punto, no un círculo de búsqueda.
+    // Si se aplicó la migración de privacidad, el punto representa la ubicación aproximada.
+    const marker = L.marker([lat, lng]).addTo(map);
 
     const verificada = bandera.estado === "verificada";
-    const urlFoto = obtenerUrlPublica(bandera);
 
     const estadoHTML = verificada
         ? `<p class="flag-status-verified">🟢 VERIFICADA</p>`
@@ -120,33 +96,6 @@ function crearMarcador(bandera) {
             <p class="flag-status-review">🟡 EN REVISIÓN</p>
             <p class="flag-review-info">
                 Esta bandera todavía no ha sido confirmada.
-            </p>
-        `;
-
-    const fotoHTML = urlFoto
-        ? `
-            <div class="flag-photo-container">
-                <img
-                    class="flag-photo ${verificada ? "" : "flag-photo-blurred"}"
-                    src="${escapeHtml(urlFoto)}"
-                    alt="${verificada
-                        ? "Fotografía de la bandera verificada"
-                        : "Fotografía borrosa de una bandera en revisión"}"
-                    loading="lazy"
-                    referrerpolicy="no-referrer"
-                >
-                ${
-                    verificada
-                        ? ""
-                        : `<p class="flag-review-info">
-                            Imagen borrosa hasta su verificación.
-                           </p>`
-                }
-            </div>
-        `
-        : `
-            <p class="flag-review-info">
-                📷 No hay fotografía pública disponible.
             </p>
         `;
 
@@ -163,13 +112,17 @@ function crearMarcador(bandera) {
             <p>📅 ${formatearFecha(bandera.fecha_vista)}</p>
 
             ${estadoHTML}
-            ${fotoHTML}
 
             <hr>
 
             ${descripcionHTML}
 
-            <p class="flag-review-info">🧭 Círculo de búsqueda aproximado de 100 metros. La ubicación exacta no se muestra.</p>
+            <button
+                type="button"
+                onclick="findFlag(${lat}, ${lng})"
+            >
+                🧭 Intentar encontrarla
+            </button>
         </div>
     `);
 
@@ -210,9 +163,16 @@ function formatearFecha(fecha) {
 
 
 /* ==========================================
-   PRIVACIDAD DE UBICACIÓN
-   No se ofrece navegación a coordenadas exactas desde el mapa público.
+   NAVEGAR HASTA EL PUNTO DEL MAPA
+   Abre Google Maps con el punto mostrado en el mapa.
 ========================================== */
+
+function findFlag(lat, lng) {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat + "," + lng)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+}
+
+window.findFlag = findFlag;
 
 
 /* ==========================================
