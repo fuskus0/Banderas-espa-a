@@ -354,7 +354,7 @@ async function crearTarjeta(bandera) {
         <div class="admin-actions">${botones}</div>`;
 
     tarjeta.querySelector('[data-action="revision"]')?.addEventListener("click", () => cambiarEstado(bandera.id, "revision"));
-    tarjeta.querySelector('[data-action="verificar"]')?.addEventListener("click", () => cambiarEstado(bandera.id, "verificada"));
+    tarjeta.querySelector('[data-action="verificar"]')?.addEventListener("click", () => cambiarEstado(bandera.id, "verificada", bandera.latitud, bandera.longitud));
     tarjeta.querySelector('[data-action="rechazar"]')?.addEventListener("click", () => cambiarEstado(bandera.id, "rechazada"));
 
     return tarjeta;
@@ -363,7 +363,7 @@ async function crearTarjeta(bandera) {
 /* ==================================================
    CAMBIOS DE ESTADO NO DESTRUCTIVOS
 ================================================== */
-async function cambiarEstado(id, nuevoEstado) {
+async function cambiarEstado(id, nuevoEstado, latitudExacta = null, longitudExacta = null) {
     const mensajes = {
         revision: {
             pregunta: "¿Pasar este aviso a revisión? Aparecerá en el mapa público como no confirmado.",
@@ -383,9 +383,22 @@ async function cambiarEstado(id, nuevoEstado) {
     if (!texto || !confirm(texto.pregunta)) return;
 
     try {
+        // Al verificar, publica la coordenada exacta que ve el administrador.
+        // Solo actualiza el registro que se está verificando; no toca otras banderas.
+        const cambios = { estado: nuevoEstado };
+        if (nuevoEstado === "verificada") {
+            const lat = Number(latitudExacta);
+            const lng = Number(longitudExacta);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                throw new Error("No se pudieron validar las coordenadas exactas de esta bandera.");
+            }
+            cambios.latitud = lat;
+            cambios.longitud = lng;
+        }
+
         const { data, error } = await supabaseClient
             .from("banderas")
-            .update({ estado: nuevoEstado })
+            .update(cambios)
             .eq("id", id)
             .select("id, estado")
             .maybeSingle();
